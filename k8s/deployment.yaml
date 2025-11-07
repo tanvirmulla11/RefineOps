@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: refineops-app
+  labels:
+    app: refineops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: refineops
+  template:
+    metadata:
+      labels:
+        app: refineops
+    spec:
+      containers:
+      - name: refineops-container
+        image: tanvirmulla11/refineops-app:latest
+        ports:
+        - containerPort: 80
