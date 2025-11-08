@@ -3,7 +3,6 @@ pipeline {
 
   environment {
     DOCKER_IMAGE = "tanvirmulla11/refineops-app"
-    SONARQUBE = "SonarQube"
     KUBECONFIG = "/home/ubuntu/.kube/config"
   }
 
@@ -12,23 +11,6 @@ pipeline {
     stage('Checkout Code') {
       steps {
         git branch: 'main', url: 'https://github.com/tanvirmulla11/RefineOps.git'
-      }
-    }
-
-    stage('SonarQube Analysis') {
-      steps {
-        withSonarQubeEnv('SonarQube') {
-          sh '''
-            echo "🔍 Running SonarQube analysis..."
-            sonar-scanner \
-              -Dsonar.projectKey=RefineOps \
-              -Dsonar.projectName=RefineOps \
-              -Dsonar.projectVersion=1.0 \
-              -Dsonar.sources=. \
-              -Dsonar.language=java \
-              -Dsonar.sourceEncoding=UTF-8
-          '''
-        }
       }
     }
 
@@ -62,7 +44,7 @@ pipeline {
       }
     }
 
-    stage('Deploy to Kubernetes (K3s on EC2 #2)') {
+    stage('Deploy to Kubernetes (K3s EC2 #2)') {
       steps {
         sh '''
           echo "🚀 Deploying to Kubernetes Cluster..."
@@ -80,7 +62,7 @@ pipeline {
     success {
       emailext to: 'tanvirmulla73@gmail.com',
                subject: '✅ RefineOps Build Success',
-               body: 'RefineOps app deployed successfully to your K3s cluster on EC2 #2!'
+               body: 'RefineOps app deployed successfully to your K3s cluster!'
     }
     failure {
       emailext to: 'tanvirmulla73@gmail.com',
