@@ -1,13 +1,15 @@
-########################################
-# Terraform Outputs for RefineOps
-########################################
-
-output "instance_public_ip" {
-  description = "Public IP of the RefineOps k3s EC2 instance"
-  value       = aws_instance.k3s_instance.public_ip
+variable "instance_type" {
+  default = "t2.micro"
 }
 
-output "instance_id" {
-  description = "Instance ID of the RefineOps EC2"
-  value       = aws_instance.k3s_instance.id
+variable "ami_id" {
+  default = "ami-0e306788ff2473ccb"
+}
+
+variable "key_name" {
+  default = "my-aws-key"
+}
+
+variable "instance_name" {
+  default = "refineops-k3s-server"
 }
