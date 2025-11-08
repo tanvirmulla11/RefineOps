@@ -3,7 +3,7 @@ pipeline {
 
   environment {
     DOCKER_IMAGE = "tanvirmulla11/refineops-app"
-    KUBECONFIG = "/home/ubuntu/.kube/config"
+    KUBECONFIG = "/var/lib/jenkins/.kube/config"
   }
 
   stages {
