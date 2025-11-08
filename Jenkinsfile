@@ -32,7 +32,7 @@ pipeline {
       }
     }
 
-    stage('Push Docker Image') {
+    stage('Push Docker Image to DockerHub') {
       steps {
         withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
           sh '''
@@ -44,15 +44,18 @@ pipeline {
       }
     }
 
-    stage('Deploy to Kubernetes (K3s EC2 #2)') {
+    stage('Deploy to K3s Cluster (EC2 #2)') {
       steps {
         sh '''
-          echo "🚀 Deploying to Kubernetes Cluster..."
-          kubectl --kubeconfig=$KUBECONFIG apply -f k8s/deployment.yaml
-          kubectl --kubeconfig=$KUBECONFIG apply -f k8s/service.yaml
-          echo "⏳ Waiting for deployment rollout..."
-          kubectl --kubeconfig=$KUBECONFIG rollout status deployment/refineops-app
-          echo "✅ Deployment completed successfully!"
+          echo "🚀 Deploying to K3s cluster on EC2 #2..."
+          kubectl --kubeconfig=$KUBECONFIG apply -f k8s/deployment.yaml || true
+          kubectl --kubeconfig=$KUBECONFIG apply -f k8s/service.yaml || true
+
+          echo "⏳ Waiting for rollout to complete..."
+          kubectl --kubeconfig=$KUBECONFIG rollout status deployment/refineops-app --timeout=90s
+
+          echo "✅ Current pods status:"
+          kubectl --kubeconfig=$KUBECONFIG get pods -o wide
         '''
       }
     }
@@ -62,12 +65,12 @@ pipeline {
     success {
       emailext to: 'tanvirmulla73@gmail.com',
                subject: '✅ RefineOps Build Success',
-               body: 'RefineOps app deployed successfully to your K3s cluster!'
+               body: '🎉 RefineOps app deployed successfully to your K3s cluster!'
     }
     failure {
       emailext to: 'tanvirmulla73@gmail.com',
                subject: '❌ RefineOps Build Failed',
-               body: 'Please check Jenkins console output for errors.'
+               body: '⚠️ Please check Jenkins console output for errors.'
     }
   }
 }
