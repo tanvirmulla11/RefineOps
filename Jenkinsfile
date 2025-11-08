@@ -11,17 +11,26 @@ pipeline {
 
     stage('Checkout Code') {
       steps {
-        git 'https://github.com/tanvirmulla11/refineops.git'
+        git branch: 'main', url: 'https://github.com/tanvirmulla11/RefineOps.git'
       }
     }
 
     stage('Terraform Apply - Create EC2') {
       steps {
         dir('terraform') {
-          withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+          withCredentials([usernamePassword(credentialsId: 'aws-creds', usernameVariable: 'AWS_ACCESS_KEY', passwordVariable: 'AWS_SECRET_KEY')]) {
             sh '''
+              echo "Configuring AWS credentials..."
+              mkdir -p ~/.aws
+              echo "[default]" > ~/.aws/credentials
+              echo "aws_access_key_id=$AWS_ACCESS_KEY" >> ~/.aws/credentials
+              echo "aws_secret_access_key=$AWS_SECRET_KEY" >> ~/.aws/credentials
+              echo "[default]" > ~/.aws/config
+              echo "region=us-east-1" >> ~/.aws/config
+
               terraform init
-              terraform apply -auto-approve
+              terraform plan -var "AWS_ACCESS_KEY=$AWS_ACCESS_KEY" -var "AWS_SECRET_KEY=$AWS_SECRET_KEY"
+              terraform apply -auto-approve -var "AWS_ACCESS_KEY=$AWS_ACCESS_KEY" -var "AWS_SECRET_KEY=$AWS_SECRET_KEY"
             '''
           }
         }
@@ -51,8 +60,10 @@ pipeline {
     stage('Push Docker Image') {
       steps {
         withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
-          sh 'echo $PASS | docker login -u $USER --password-stdin'
-          sh 'docker push $DOCKER_IMAGE:latest'
+          sh '''
+            echo $PASS | docker login -u $USER --password-stdin
+            docker push $DOCKER_IMAGE:latest
+          '''
         }
       }
     }
@@ -66,10 +77,14 @@ pipeline {
 
   post {
     success {
-      emailext to: 'tanvirmulla73@gmail.com', subject: '✅ RefineOps Build Success', body: 'RefineOps app deployed successfully!'
+      emailext to: 'tanvirmulla73@gmail.com',
+               subject: '✅ RefineOps Build Success',
+               body: 'RefineOps app deployed successfully!'
     }
     failure {
-      emailext to: 'tanvirmulla73@gmail.com', subject: '❌ RefineOps Build Failed', body: 'Please check Jenkins logs.'
+      emailext to: 'tanvirmulla73@gmail.com',
+               subject: '❌ RefineOps Build Failed',
+               body: 'Please check Jenkins logs.'
     }
   }
 }
