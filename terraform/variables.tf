@@ -19,9 +19,10 @@ variable "instance_type" {
   default     = "t2.micro"  # Free Tier eligible
 }
 
+# ✅ Updated to a valid Ubuntu 22.04 LTS AMI (N. Virginia / us-east-1)
 variable "ami_id" {
   description = "Ubuntu 22.04 AMI ID (us-east-1)"
-  default     = "ami-0e306788ff2473ccb"
+  default     = "ami-0fc5d935ebf8bc3bc"
 }
 
 variable "key_name" {
