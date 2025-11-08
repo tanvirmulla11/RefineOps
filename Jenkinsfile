@@ -15,38 +15,11 @@ pipeline {
       }
     }
 
-    stage('Terraform Apply - Create EC2') {
-      steps {
-        dir('terraform') {
-          withCredentials([usernamePassword(credentialsId: 'aws-creds', usernameVariable: 'AWS_ACCESS_KEY', passwordVariable: 'AWS_SECRET_KEY')]) {
-            sh '''
-              echo "Configuring AWS credentials..."
-              mkdir -p ~/.aws
-              cat > ~/.aws/credentials <<EOF
-[default]
-aws_access_key_id=$AWS_ACCESS_KEY
-aws_secret_access_key=$AWS_SECRET_KEY
-EOF
-
-              cat > ~/.aws/config <<EOF
-[default]
-region=us-east-1
-EOF
-
-              terraform init -input=false
-              terraform plan -input=false -var "AWS_ACCESS_KEY=$AWS_ACCESS_KEY" -var "AWS_SECRET_KEY=$AWS_SECRET_KEY"
-              terraform apply -input=false -auto-approve -var "AWS_ACCESS_KEY=$AWS_ACCESS_KEY" -var "AWS_SECRET_KEY=$AWS_SECRET_KEY"
-            '''
-          }
-        }
-      }
-    }
-
     stage('SonarQube Analysis') {
       steps {
         withSonarQubeEnv('SonarQube') {
           sh '''
-            echo "Running SonarQube analysis..."
+            echo "🔍 Running SonarQube analysis..."
             sonar-scanner \
               -Dsonar.projectKey=RefineOps \
               -Dsonar.projectName=RefineOps \
@@ -61,13 +34,19 @@ EOF
 
     stage('Build Docker Image') {
       steps {
-        sh 'docker build -t $DOCKER_IMAGE:latest .'
+        sh '''
+          echo "🐳 Building Docker image..."
+          docker build -t $DOCKER_IMAGE:latest .
+        '''
       }
     }
 
     stage('Security Scan (Trivy)') {
       steps {
-        sh 'trivy image $DOCKER_IMAGE:latest || true'
+        sh '''
+          echo "🛡️ Scanning Docker image for vulnerabilities..."
+          trivy image $DOCKER_IMAGE:latest || true
+        '''
       }
     }
 
@@ -75,6 +54,7 @@ EOF
       steps {
         withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
           sh '''
+            echo "📦 Pushing image to DockerHub..."
             echo $PASS | docker login -u $USER --password-stdin
             docker push $DOCKER_IMAGE:latest
           '''
@@ -82,9 +62,16 @@ EOF
       }
     }
 
-    stage('Deploy to Kubernetes') {
+    stage('Deploy to Kubernetes (K3s on EC2 #2)') {
       steps {
-        sh 'kubectl --kubeconfig=$KUBECONFIG apply -f k8s/'
+        sh '''
+          echo "🚀 Deploying to Kubernetes Cluster..."
+          kubectl --kubeconfig=$KUBECONFIG apply -f k8s/deployment.yaml
+          kubectl --kubeconfig=$KUBECONFIG apply -f k8s/service.yaml
+          echo "⏳ Waiting for deployment rollout..."
+          kubectl --kubeconfig=$KUBECONFIG rollout status deployment/refineops-app
+          echo "✅ Deployment completed successfully!"
+        '''
       }
     }
   }
@@ -93,12 +80,12 @@ EOF
     success {
       emailext to: 'tanvirmulla73@gmail.com',
                subject: '✅ RefineOps Build Success',
-               body: 'RefineOps app deployed successfully!'
+               body: 'RefineOps app deployed successfully to your K3s cluster on EC2 #2!'
     }
     failure {
       emailext to: 'tanvirmulla73@gmail.com',
                subject: '❌ RefineOps Build Failed',
-               body: 'Please check Jenkins logs.'
+               body: 'Please check Jenkins console output for errors.'
     }
   }
 }
