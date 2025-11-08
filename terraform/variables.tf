@@ -1,15 +1,35 @@
+############################################################
+# AWS Credentials
+############################################################
+variable "AWS_ACCESS_KEY" {
+  description = "AWS Access Key for authentication"
+  type        = string
+}
+
+variable "AWS_SECRET_KEY" {
+  description = "AWS Secret Key for authentication"
+  type        = string
+}
+
+############################################################
+# EC2 Configuration
+############################################################
 variable "instance_type" {
-  default = "t2.micro"
+  description = "EC2 instance type"
+  default     = "t2.micro"  # Free Tier eligible
 }
 
 variable "ami_id" {
-  default = "ami-0e306788ff2473ccb" # Ubuntu 22.04 (N. Virginia)
+  description = "Ubuntu 22.04 AMI ID (us-east-1)"
+  default     = "ami-0e306788ff2473ccb"
 }
 
 variable "key_name" {
-  default = "my-aws-key"
+  description = "Your existing AWS Key Pair name"
+  default     = "my-aws-key"
 }
 
 variable "instance_name" {
-  default = "refineops-k3s-server"
+  description = "Tag name for the instance"
+  default     = "refineops-k3s-server"
 }
