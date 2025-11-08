@@ -22,15 +22,20 @@ pipeline {
             sh '''
               echo "Configuring AWS credentials..."
               mkdir -p ~/.aws
-              echo "[default]" > ~/.aws/credentials
-              echo "aws_access_key_id=$AWS_ACCESS_KEY" >> ~/.aws/credentials
-              echo "aws_secret_access_key=$AWS_SECRET_KEY" >> ~/.aws/credentials
-              echo "[default]" > ~/.aws/config
-              echo "region=us-east-1" >> ~/.aws/config
+              cat > ~/.aws/credentials <<EOF
+[default]
+aws_access_key_id=$AWS_ACCESS_KEY
+aws_secret_access_key=$AWS_SECRET_KEY
+EOF
 
-              terraform init
-              terraform plan -var "AWS_ACCESS_KEY=$AWS_ACCESS_KEY" -var "AWS_SECRET_KEY=$AWS_SECRET_KEY"
-              terraform apply -auto-approve -var "AWS_ACCESS_KEY=$AWS_ACCESS_KEY" -var "AWS_SECRET_KEY=$AWS_SECRET_KEY"
+              cat > ~/.aws/config <<EOF
+[default]
+region=us-east-1
+EOF
+
+              terraform init -input=false
+              terraform plan -input=false -var "AWS_ACCESS_KEY=$AWS_ACCESS_KEY" -var "AWS_SECRET_KEY=$AWS_SECRET_KEY"
+              terraform apply -input=false -auto-approve -var "AWS_ACCESS_KEY=$AWS_ACCESS_KEY" -var "AWS_SECRET_KEY=$AWS_SECRET_KEY"
             '''
           }
         }
@@ -40,7 +45,16 @@ pipeline {
     stage('SonarQube Analysis') {
       steps {
         withSonarQubeEnv('SonarQube') {
-          sh 'sonar-scanner'
+          sh '''
+            echo "Running SonarQube analysis..."
+            sonar-scanner \
+              -Dsonar.projectKey=RefineOps \
+              -Dsonar.projectName=RefineOps \
+              -Dsonar.projectVersion=1.0 \
+              -Dsonar.sources=. \
+              -Dsonar.language=java \
+              -Dsonar.sourceEncoding=UTF-8
+          '''
         }
       }
     }
