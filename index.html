@@ -1,14 +1,11 @@
 <!DOCTYPE html>
 <!--
   App: Satyam Refinery – Vendor Silver Melting & Billing System
-  Version: 3.8.2 (Full Responsive Overhaul for Mobile & Tablets)
+  Version: 3.8.4 (Fixed JavaScript Variable Declaration Conflict)
 
-  Key Improvements (3.8.2):
-  1. META TAGS: Added Apple and Theme meta tags for a better mobile experience.
-  2. CSS FIXES: Added responsive CSS to prevent layout overflow on small screens (max-width: 640px).
-  3. MOBILE TOGGLE: Ensured the mobile sidebar toggle button functions correctly via JS.
-  4. CHART RESIZE: Added a window resize listener for Chart.js instances to ensure responsiveness on device rotation/resize.
-  5. PWA MANIFEST: Added manifest link for optional "app-like" installable experience.
+  Key Improvements (3.8.4):
+  1. JS FIX: Removed duplicate const declarations and redundant listeners from the bottom of the body.
+  2. JS FIX: Integrated mobile sidebar toggle logic (using .open class) correctly into the main script's event listeners block where the variables are globally defined.
 -->
 <html lang="en" class="h-full">
 <head>
@@ -46,6 +43,12 @@
 
     <!-- 7. Custom Styles -->
     <style>
+        /* Optional: Smooth Mobile Experience (Step 5) */
+        html {
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+        }
+        
         /* Custom scrollbar for light theme only */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
@@ -90,7 +93,6 @@
 
         /* Modal styles */
         .modal { transition: opacity 0.25s ease; }
-        .modal-content { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform: translateY(-30px) scale(0.9); }
         .modal.open .modal-content { transform: translateY(0) scale(1); }
         .modal.open { opacity: 1; }
 
@@ -156,51 +158,89 @@
             pointer-events: none;
             z-index: 0;
         }
+        
+        /* Nav Fix: Ensure pages are hidden/shown correctly (Step 4) */
+        .page-content {
+          display: none;
+        }
+        .page-content.active {
+          display: block !important;
+        }
 
-        /* Responsive Fixes (Step 2) */
-        /* This ensures layout integrity on mobile by fixing overflow and hiding the desktop sidebar view */
-        @media (max-width: 767px) { /* Targeting sm:hidden components below md (768px) */
-            body {
+        /* =========================
+           📱 Mobile Responsiveness Fix (Step 1)
+           ========================= */
+        @media (max-width: 768px) { 
+            html, body {
+                height: auto !important;
                 overflow-y: auto !important;
                 overflow-x: hidden !important;
             }
-            #main-content-wrapper {
-                /* Reset padding applied by desktop sidebar view */
-                padding-left: 0 !important;
-            }
-            /* The mobile toggle handler will manage #sidebar display */
+
+            /* Sidebar hidden by default, toggled by button */
             #sidebar {
                 position: fixed;
                 top: 0;
                 left: 0;
-                bottom: 0;
-                z-index: 50; /* Needs to be above content */
-                transform: translateX(0);
-                /* Initial state is hidden on mobile, controlled by JS */
-                display: none;
+                width: 70%;
+                height: 100%;
+                z-index: 9999;
+                background: #fff;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease-in-out;
             }
-            /* Ensure mobile button is always visible on small screens */
-            #sidebar-toggle-mobile {
+            #sidebar.hidden { /* Override generic hidden class if present on mobile */
                 display: block !important;
             }
-            /* Adjust grid in dashboard/reports for single column on mobile */
+            #sidebar.open {
+                transform: translateX(0);
+            }
+
+            /* Content wrapper fixes */
+            #main-content-wrapper {
+                padding-left: 0 !important;
+                overflow-y: visible !important;
+            }
+
+            /* Fix page-content to scroll properly */
+            .page-content {
+                overflow-y: auto !important;
+                max-height: none !important;
+                padding-bottom: 5rem !important; /* Ensure floating button doesn't block content */
+            }
+
+            /* Cards & grids auto stack */
             .grid {
                 grid-template-columns: 1fr !important;
             }
-            /* Reduce padding on mobile for better use of space */
+
+            /* Reduce padding for readability */
             .p-6, .px-8, .py-6 {
                 padding: 1rem !important;
             }
-            /* Adjust table fonts for mobile */
+
+            /* Table improvements */
             table {
                 font-size: 14px !important;
             }
             th, td {
                 padding: 8px !important;
             }
+            
             /* Ensure the login screen respects the overflow fix */
             #login-screen {
                 overflow-y: auto !important;
+            }
+            
+            /* Chart container scroll (Step 2 support) */
+            .chart-container {
+                overflow-x: auto !important;
+            }
+            /* Set a min-width for the chart area so it scrolls */
+             #melting-chart {
+                min-width: 600px;
+                width: 100%; /* Keep width calculation correct */
+                height: 400px; /* Preserve height */
             }
         }
         
@@ -437,7 +477,7 @@
                     <!--
                     ================ PAGE: DASHBOARD ================
                     -->
-                    <div id="page-dashboard" class="page-content space-y-8">
+                    <div id="page-dashboard" class="page-content active space-y-8">
                         <h2 class="text-3xl font-bold text-gray-900">Overview</h2>
                         <!-- Stat Cards (Adjusted grid and spacing for consistency) -->
                         <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-5">
@@ -523,12 +563,12 @@
                             </div>
                         </div>
 
-                        <!-- Chart -->
+                        <!-- Chart (Step 2: Added .chart-container) -->
                         <div class="bg-white shadow-2xl border border-gray-100 rounded-2xl p-6">
                             <h3 class="text-xl font-semibold leading-relaxed text-gray-900">Recent Job Weights (Last 10)</h3>
                             <p class="text-sm text-gray-600 font-inter mb-4">Gross vs. Net weight comparison for recently completed jobs.</p>
-                            <div class="h-[400px]">
-                                <canvas id="melting-chart" class="mt-4"></canvas>
+                            <div class="chart-container overflow-x-auto">
+                                <canvas id="melting-chart" class="mt-4 w-full h-[400px]"></canvas>
                             </div>
                         </div>
                     </div>
@@ -619,7 +659,7 @@
                     <!--
                     ================ NEW PAGE: INVENTORY TRACKING ================
                     -->
-                    <div id="page-inventory" class="page-content hidden space-y-8">
+                    <div id="page-inventory" class="page-content hidden">
                         <!-- Summary Panel -->
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
                             <!-- Total Inventory Weight -->
@@ -672,7 +712,7 @@
                     <!--
                     ================ NEW PAGE: PURCHASE ORDERS ================
                     -->
-                    <div id="page-purchase-orders" class="page-content hidden space-y-8">
+                    <div id="page-purchase-orders" class="page-content hidden">
                          <!-- Summary Panel -->
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
                             <!-- Total Orders -->
@@ -726,7 +766,7 @@
                     <!--
                     ================ PAGE: BILLING SYSTEM ================
                     -->
-                    <div id="page-billing" class="page-content hidden space-y-8">
+                    <div id="page-billing" class="page-content hidden">
                         <div class="bg-white shadow-2xl border border-gray-100 rounded-2xl p-6">
                             <h3 class="text-xl font-semibold text-gray-900">Generate Customer Bill</h3>
                             <div class="mt-4 max-w-md">
@@ -792,7 +832,7 @@
                     <!--
                     ================ PAGE: REPORTS & ANALYTICS ================
                     -->
-                    <div id="page-reports" class="page-content space-y-8">
+                    <div id="page-reports" class="page-content hidden">
                         <!-- Gradient Header for Reports -->
                         <div class="rounded-2xl p-6 bg-gradient-to-r from-blue-600 to-indigo-500 shadow-2xl">
                              <h2 class="text-3xl font-bold text-white mb-1">Performance Analytics</h2>
@@ -806,21 +846,21 @@
                                 <div class="bg-white shadow-2xl border border-gray-100 rounded-2xl p-6 hover-lift">
                                     <h3 class="text-xl font-semibold text-gray-900">Monthly Melting Trend (Net Output)</h3>
                                     <p class="text-sm text-gray-600 font-inter mb-4">Total net silver output in grams per month.</p>
-                                    <div class="h-[450px] min-h-[400px]"><canvas id="reports-monthly-melting"></canvas></div>
+                                    <div class="h-[450px] min-h-[400px] chart-container overflow-x-auto"><canvas id="reports-monthly-melting"></canvas></div>
                                 </div>
 
                                 <!-- Purity Distribution Chart -->
                                 <div class="bg-white shadow-2xl border border-gray-100 rounded-2xl p-6 hover-lift">
                                     <h3 class="text-xl font-semibold text-gray-900">Job Purity Distribution</h3>
                                     <p class="text-sm text-gray-600 font-inter mb-4">Breakdown of completed jobs by purity level.</p>
-                                    <div class="h-[450px] min-h-[400px] flex items-center justify-center"><canvas id="reports-purity-distribution"></canvas></div>
+                                    <div class="h-[450px] min-h-[400px] flex items-center justify-center chart-container overflow-x-auto"><canvas id="reports-purity-distribution"></canvas></div>
                                 </div>
 
                                 <!-- Monthly Revenue Chart -->
                                 <div class="lg:col-span-2 bg-white shadow-2xl border border-gray-100 rounded-2xl p-6 hover-lift">
                                     <h3 class="text-xl font-semibold text-gray-900">Monthly Revenue Trend</h3>
                                     <p class="text-sm text-gray-600 font-inter mb-4">Total melting charges billed per month.</p>
-                                    <div class="h-[450px] min-h-[400px]"><canvas id="reports-monthly-revenue"></canvas></div>
+                                    <div class="h-[450px] min-h-[400px] chart-container overflow-x-auto"><canvas id="reports-monthly-revenue"></canvas></div>
                                 </div>
                             </div>
                         </div>
@@ -829,7 +869,7 @@
                     <!--
                     ================ NEW PAGE: USER MANAGEMENT (Simulated) ================
                     -->
-                    <div id="page-user-mgmt" class="page-content hidden space-y-8">
+                    <div id="page-user-mgmt" class="page-content hidden">
                         <div class="bg-white shadow-2xl border border-gray-100 overflow-hidden rounded-2xl">
                             <div class="p-6 border-b border-gray-200">
                                 <h3 class="text-xl font-semibold text-gray-900">System Users (Simulated)</h3>
@@ -862,7 +902,7 @@
                     <!--
                     ================ NEW PAGE: NOTIFICATIONS ================
                     -->
-                    <div id="page-notifications" class="page-content hidden space-y-8">
+                    <div id="page-notifications" class="page-content hidden">
                         <div class="bg-white shadow-2xl border border-gray-100 overflow-hidden rounded-2xl">
                             <div class="p-6 border-b border-gray-200">
                                 <h3 class="text-xl font-semibold text-gray-900">Real-time Business Alerts</h3>
@@ -882,7 +922,7 @@
                     <!--
                     ================ PAGE: MY PROFILE ================
                     -->
-                    <div id="page-profile" class="page-content hidden space-y-8">
+                    <div id="page-profile" class="page-content hidden">
                         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                             <!-- Column 1: Profile Card -->
                             <div class="lg:col-span-1 space-y-6">
@@ -977,7 +1017,7 @@
                     <!--
                     ================ PAGE: SETTINGS ================
                     -->
-                    <div id="page-settings" class="page-content hidden space-y-8">
+                    <div id="page-settings" class="page-content hidden">
                         <div class="bg-white shadow-2xl border border-gray-100 overflow-hidden rounded-2xl">
                             <div class="p-6 border-b border-gray-200">
                                 <h3 class="text-xl font-semibold text-gray-900">Application Settings</h3>
@@ -1845,9 +1885,10 @@
             $$('.sidebar-link').forEach(link => {
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
-                    showPage(link.dataset.page);
+                    // Changed to new showPage logic (Step 4)
+                    showPage(link.dataset.page); 
                     // Close sidebar on mobile after click
-                    if (window.innerWidth < 768) toggleSidebar(false); // Changed breakpoint to md
+                    if (window.innerWidth < 768) toggleSidebar(false); 
                 });
             });
 
@@ -1855,31 +1896,29 @@
         }
 
         function toggleSidebar(expand) {
-             const isExpanded = expand === undefined ? sidebar.classList.contains('sidebar-expanded') : expand;
-
-             if (window.innerWidth < 768) { // Changed breakpoint to md
-                 // Mobile view always keeps the sidebar expanded when open
+             // For desktop only:
+             if (window.innerWidth >= 768) {
+                 const isExpanded = expand === undefined ? sidebar.classList.contains('sidebar-expanded') : expand;
+                 if (isExpanded) {
+                     sidebar.classList.replace('sidebar-expanded', 'sidebar-collapsed');
+                     mainContentWrapper.classList.replace('pl-72', 'pl-20'); 
+                     sidebarTitle.classList.add('hidden');
+                     $$('nav span').forEach(span => span.classList.add('hidden'));
+                 } else {
+                     sidebar.classList.replace('sidebar-collapsed', 'sidebar-expanded');
+                     mainContentWrapper.classList.replace('pl-20', 'pl-72'); 
+                     sidebarTitle.classList.remove('hidden');
+                     $$('nav span').forEach(span => span.classList.remove('hidden'));
+                 }
+             } else {
+                 // For mobile only (using the classes defined in Step 1/3)
                  if (expand === false) {
-                     sidebar.classList.add('hidden');
+                     sidebar.classList.remove('open');
                      mobileSidebarOverlay.classList.add('hidden');
                  } else {
-                     sidebar.classList.remove('hidden');
-                     mobileSidebarOverlay.classList.remove('hidden');
+                     // The toggle logic is now handled by the separate listener below (Step 3)
+                     // This function is kept minimal for mobile logic consistency when called from nav links
                  }
-                 return;
-             }
-
-             // Desktop view logic
-             if (isExpanded) {
-                 sidebar.classList.replace('sidebar-expanded', 'sidebar-collapsed');
-                 mainContentWrapper.classList.replace('pl-72', 'pl-20'); // Adjusted to new sidebar widths
-                 sidebarTitle.classList.add('hidden');
-                 $$('nav span').forEach(span => span.classList.add('hidden'));
-             } else {
-                 sidebar.classList.replace('sidebar-collapsed', 'sidebar-expanded');
-                 mainContentWrapper.classList.replace('pl-20', 'pl-72'); // Adjusted to new sidebar widths
-                 sidebarTitle.classList.remove('hidden');
-                 $$('nav span').forEach(span => span.classList.remove('hidden'));
              }
         }
 
@@ -1887,11 +1926,17 @@
             if (!state.isAuthReady) return;
 
             state.currentPage = pageId;
-            pageContents.forEach(page => page.classList.add('hidden'));
+            
+            // NEW Page toggle logic (Step 4)
+            pageContents.forEach(page => {
+                page.classList.remove('active');
+                page.classList.add('hidden');
+            });
 
             const newPage = $(`#page-${pageId}`);
             if (newPage) {
                 newPage.classList.remove('hidden');
+                newPage.classList.add('active'); // Set the active class
             }
 
             $$('.sidebar-link').forEach(link => {
@@ -1908,8 +1953,7 @@
                 passwordResetSuccess.textContent = '';
             }
 
-            // Centralized render call - NOTE: This only calls the render function if navigated to the page.
-            // The real-time updates are handled by the listeners regardless of the current page.
+            // Centralized render call
             if (window[renderFunctionName]) {
                 window[renderFunctionName]();
             }
@@ -3131,14 +3175,22 @@
 
         generateBillButton.addEventListener('click', openBillModal);
 
-        // Mobile Sidebar Toggle (Step 3)
-        sidebarToggleMobile.addEventListener('click', () => {
-            document.getElementById('sidebar').classList.toggle('hidden');
-            document.getElementById('mobile-sidebar-overlay').classList.toggle('hidden');
-        });
-        mobileSidebarOverlay.addEventListener('click', () => toggleSidebar(false));
+        // Mobile Sidebar Toggle (FIXED: Moved to end of file, inside module script, no redeclarations needed)
+        if (sidebarToggleMobile) {
+            sidebarToggleMobile.addEventListener('click', () => {
+                sidebar.classList.toggle('open');
+                mobileSidebarOverlay.classList.toggle('hidden');
+            });
+        }
+        if (mobileSidebarOverlay) {
+             mobileSidebarOverlay.addEventListener('click', () => {
+                sidebar.classList.remove('open');
+                mobileSidebarOverlay.classList.add('hidden');
+            });
+        }
+        
 
-        // Chart.js Canvas Resize (Step 4)
+        // Chart.js Canvas Resize 
         window.addEventListener('resize', () => {
             if (window.Chart && window.Chart.instances) {
                 window.Chart.helpers.each(window.Chart.instances, function(instance){
