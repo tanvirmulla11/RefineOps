@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <!--
   App: Satyam Refinery – Vendor Silver Melting & Billing System
-  Version: 3.8.4 (Fixed JavaScript Variable Declaration Conflict)
+  Version: 3.8.5 (Mobile Sidebar Slide & Full Page Scroll Fix)
 
-  Key Improvements (3.8.4):
-  1. JS FIX: Removed duplicate const declarations and redundant listeners from the bottom of the body.
-  2. JS FIX: Integrated mobile sidebar toggle logic (using .open class) correctly into the main script's event listeners block where the variables are globally defined.
+  Key Improvements (3.8.5):
+  1. SIDEBAR SLIDE: Implemented CSS classes and JS logic to make the mobile sidebar smoothly slide in and out using CSS transforms (`-translate-x-full`).
+  2. MOBILE NAVIGATION: Ensured all sidebar clicks correctly close the sidebar on mobile and trigger page navigation.
+  3. SCROLL FIXES: Re-applied explicit mobile CSS overrides to guarantee vertical scrolling and correct width containment.
+  4. CHART FIX: Applied horizontal overflow wrapper to the main dashboard chart.
 -->
 <html lang="en" class="h-full">
 <head>
@@ -159,7 +161,7 @@
             z-index: 0;
         }
         
-        /* Nav Fix: Ensure pages are hidden/shown correctly (Step 4) */
+        /* Nav Fix: Ensure pages are hidden/shown correctly */
         .page-content {
           display: none;
         }
@@ -168,32 +170,34 @@
         }
 
         /* =========================
-           📱 Mobile Responsiveness Fix (Step 1)
+           📱 Mobile Responsiveness Fix (Step 3)
            ========================= */
         @media (max-width: 768px) { 
-            html, body {
-                height: auto !important;
+            body, html {
                 overflow-y: auto !important;
                 overflow-x: hidden !important;
+                height: auto !important;
             }
-
-            /* Sidebar hidden by default, toggled by button */
+            
+            /* Sidebar styling for mobile slide-in */
             #sidebar {
                 position: fixed;
                 top: 0;
                 left: 0;
-                width: 70%;
+                width: 75% !important; /* Adjusted width */
                 height: 100%;
                 z-index: 9999;
                 background: #fff;
-                transform: translateX(-100%);
-                transition: transform 0.3s ease-in-out;
+                /* Overrides the -translate-x-full applied by JS */
+                transition: transform 0.3s ease-in-out; 
             }
-            #sidebar.hidden { /* Override generic hidden class if present on mobile */
-                display: block !important;
+            #sidebar.hidden { 
+                /* Ensures the element exists in DOM but slides out */
+                display: flex !important; 
             }
-            #sidebar.open {
-                transform: translateX(0);
+            
+            #mobile-sidebar-overlay {
+                background: rgba(0,0,0,0.5); /* Make overlay visible */
             }
 
             /* Content wrapper fixes */
@@ -204,6 +208,7 @@
 
             /* Fix page-content to scroll properly */
             .page-content {
+                display: block !important; /* Ensure content is visible on mobile */
                 overflow-y: auto !important;
                 max-height: none !important;
                 padding-bottom: 5rem !important; /* Ensure floating button doesn't block content */
@@ -232,15 +237,14 @@
                 overflow-y: auto !important;
             }
             
-            /* Chart container scroll (Step 2 support) */
+            /* Chart container scroll */
             .chart-container {
                 overflow-x: auto !important;
             }
-            /* Set a min-width for the chart area so it scrolls */
              #melting-chart {
                 min-width: 600px;
-                width: 100%; /* Keep width calculation correct */
-                height: 400px; /* Preserve height */
+                width: 100%; 
+                height: 400px; 
             }
         }
         
@@ -392,7 +396,8 @@
     -->
     <div id="main-app" class="hidden h-full relative overflow-hidden">
         <!-- Sidebar (desktop view) -->
-        <div id="sidebar" class="fixed inset-y-0 z-50 flex flex-col border-r border-gray-200 bg-white no-print sidebar-transition sidebar-expanded sm:sidebar-expanded">
+        <!-- Step 1: Updated class list for mobile slide-in -->
+        <div id="sidebar" class="fixed inset-y-0 z-50 flex flex-col border-r border-gray-200 bg-white no-print sidebar-transition sidebar-expanded sm:sidebar-expanded transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
             <!-- Sidebar header -->
             <div class="flex flex-shrink-0 items-center h-16 px-6 border-b border-gray-200">
                 <i data-lucide="flame" class="h-8 w-auto text-blue-600"></i>
@@ -563,7 +568,7 @@
                             </div>
                         </div>
 
-                        <!-- Chart (Step 2: Added .chart-container) -->
+                        <!-- Chart (Step 4: Added overflow-x-auto) -->
                         <div class="bg-white shadow-2xl border border-gray-100 rounded-2xl p-6">
                             <h3 class="text-xl font-semibold leading-relaxed text-gray-900">Recent Job Weights (Last 10)</h3>
                             <p class="text-sm text-gray-600 font-inter mb-4">Gross vs. Net weight comparison for recently completed jobs.</p>
@@ -771,7 +776,7 @@
                             <h3 class="text-xl font-semibold text-gray-900">Generate Customer Bill</h3>
                             <div class="mt-4 max-w-md">
                                 <label for="billing-vendor-select" class="block text-sm font-medium text-gray-700">Select Vendor</label>
-                                <select id="billing-vendor-select" class="mt-1 block w-full rounded-2xl border-gray-300 bg-white py-3 pl-3 pr-10 text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-blue-600 sm:text-sm font-inter">
+                                <select id="billing-vendor-select" class="mt-1 block w-full rounded-2xl border-gray-300 bg-white py-3 pl-3 pr-10 text-gray-900 focus:border-blue-600 focus:ring-blue-600 sm:text-sm font-inter">
                                     <option value="">Select a vendor...</option>
                                     <!-- Options injected by JS -->
                                 </select>
@@ -1885,10 +1890,13 @@
             $$('.sidebar-link').forEach(link => {
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
-                    // Changed to new showPage logic (Step 4)
+                    // Changed to new showPage logic
                     showPage(link.dataset.page); 
-                    // Close sidebar on mobile after click
-                    if (window.innerWidth < 768) toggleSidebar(false); 
+                    // Close sidebar on mobile after click (Step 2)
+                    if (window.innerWidth < 768) {
+                        sidebar.classList.add('-translate-x-full');
+                        mobileSidebarOverlay.classList.add('hidden');
+                    }
                 });
             });
 
@@ -1913,11 +1921,10 @@
              } else {
                  // For mobile only (using the classes defined in Step 1/3)
                  if (expand === false) {
-                     sidebar.classList.remove('open');
+                     sidebar.classList.add('-translate-x-full');
                      mobileSidebarOverlay.classList.add('hidden');
                  } else {
-                     // The toggle logic is now handled by the separate listener below (Step 3)
-                     // This function is kept minimal for mobile logic consistency when called from nav links
+                    // This function is kept minimal for mobile logic consistency when called from nav links
                  }
              }
         }
@@ -1927,7 +1934,7 @@
 
             state.currentPage = pageId;
             
-            // NEW Page toggle logic (Step 4)
+            // NEW Page toggle logic
             pageContents.forEach(page => {
                 page.classList.remove('active');
                 page.classList.add('hidden');
@@ -3175,16 +3182,18 @@
 
         generateBillButton.addEventListener('click', openBillModal);
 
-        // Mobile Sidebar Toggle (FIXED: Moved to end of file, inside module script, no redeclarations needed)
+        // Mobile Sidebar Toggle (Step 1/3 fix)
         if (sidebarToggleMobile) {
             sidebarToggleMobile.addEventListener('click', () => {
-                sidebar.classList.toggle('open');
+                // Use translate-x-full class for sliding
+                sidebar.classList.toggle('-translate-x-full');
                 mobileSidebarOverlay.classList.toggle('hidden');
             });
         }
         if (mobileSidebarOverlay) {
              mobileSidebarOverlay.addEventListener('click', () => {
-                sidebar.classList.remove('open');
+                // Use translate-x-full class for sliding
+                sidebar.classList.add('-translate-x-full');
                 mobileSidebarOverlay.classList.add('hidden');
             });
         }
