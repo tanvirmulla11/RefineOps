@@ -1,32 +1,33 @@
 <!DOCTYPE html>
-<!-- 
+<!--
   App: Satyam Refinery – Vendor Silver Melting & Billing System
-  Version: 3.8.1 (PDF Export Fix & Enhancements)
-  
-  Key Improvements:
-  1. PDF FIX: Reworked downloadBillAsPDF() using aggressive scaling and jsPDF settings (A4 format) to ensure all content, including tables and totals, is visible in the exported PDF.
-  2. WATERMARK: Added a subtle watermark to the printable area.
-  3. PRINT BUTTON: Added a separate 'Print Bill' button.
-  4. LIVE CHART UPDATE: Charts now use .update() directly on the Chart.js instance to animate data changes smoothly.
-  
-  RESPONSIVENESS IMPROVEMENTS (Mobile-First Optimization):
-  - Main content wrapper padding changed from default pl-72 to pl-0 for mobile.
-  - Header and Page content use smaller px-4 padding on mobile.
-  - Modals utilize w-[95%] width on mobile to ensure they fit screen bounds.
-  - Bill header sections modified to stack on mobile (flex-col, grid-cols-1).
+  Version: 3.8.2 (Full Responsive Overhaul for Mobile & Tablets)
+
+  Key Improvements (3.8.2):
+  1. META TAGS: Added Apple and Theme meta tags for a better mobile experience.
+  2. CSS FIXES: Added responsive CSS to prevent layout overflow on small screens (max-width: 640px).
+  3. MOBILE TOGGLE: Ensured the mobile sidebar toggle button functions correctly via JS.
+  4. CHART RESIZE: Added a window resize listener for Chart.js instances to ensure responsiveness on device rotation/resize.
+  5. PWA MANIFEST: Added manifest link for optional "app-like" installable experience.
 -->
 <html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- START: Mobile/PWA Enhancements -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="manifest" href="manifest.json">
+    <!-- END: Mobile/PWA Enhancements -->
     <title>Satyam Refinery Dashboard</title>
-    
+
     <!-- 1. TailwindCSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- 2. Chart.js via CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
+
     <!-- 3. PDF Exporter (html2canvas & jsPDF) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -39,22 +40,22 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
+
     <!-- 6. THREE.js for subtle 3D background effects (optional thematic animation) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    
+
     <!-- 7. Custom Styles -->
     <style>
         /* Custom scrollbar for light theme only */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; } 
-        ::-webkit-scrollbar-thumb { background: #bdbdbd; border-radius: 4px; } 
-        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; } 
-        
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #bdbdbd; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+
         /* Font and base colors */
         body {
             font-family: 'Poppins', sans-serif;
-            font-size: 16px; 
+            font-size: 16px;
             line-height: 1.6;
             letter-spacing: 0.01em;
         }
@@ -62,18 +63,18 @@
         .text-gray-900 { color: #111827; }
         .text-gray-800, .text-gray-700 { color: #4b5563; } /* Increased contrast for body text */
         .font-inter { font-family: 'Inter', sans-serif; }
-        
+
         /* Active sidebar link style */
         .sidebar-link.active {
-            background-color: #2563eb; 
-            color: #ffffff !important; 
+            background-color: #2563eb;
+            color: #ffffff !important;
             font-weight: 600;
             box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
         }
         .sidebar-link.active i {
             color: #ffffff !important;
         }
-        
+
         /* Premium Hover effects for cards/sections */
         .hover-lift {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -92,14 +93,14 @@
         .modal-content { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform: translateY(-30px) scale(0.9); }
         .modal.open .modal-content { transform: translateY(0) scale(1); }
         .modal.open { opacity: 1; }
-        
+
         /* Loading Spinner */
         .spinner {
             border: 4px solid rgba(0, 0, 0, 0.1);
             width: 36px;
             height: 36px;
             border-radius: 50%;
-            border-left-color: #2563eb; 
+            border-left-color: #2563eb;
             animation: spin 1s linear infinite;
         }
 
@@ -116,12 +117,12 @@
         .page-content {
             animation: fadeIn 0.4s ease-out;
         }
-        
-        /* Sidebar styles (Retained for JS compatibility, but layout driven by Tailwind classes) */
-        .sidebar-expanded { width: 18rem; } 
-        .sidebar-collapsed { width: 5rem; } 
+
+        /* Sidebar styles */
+        .sidebar-expanded { width: 18rem; }
+        .sidebar-collapsed { width: 5rem; }
         .sidebar-transition { transition: width 0.3s ease-in-out; }
-        
+
         /* 3D Canvas Background */
         #three-canvas {
             position: fixed;
@@ -131,7 +132,7 @@
             height: 100%;
             z-index: 0;
         }
-        
+
         /* Live Sync Indicator Pulse */
         @keyframes pulse-live {
             0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
@@ -141,7 +142,7 @@
         .live-sync-indicator {
             animation: pulse-live 1.5s infinite;
         }
-        
+
         /* Watermark for Bill PDF */
         #bill-print-area::before {
             content: "SATYAM REFINERY";
@@ -156,6 +157,53 @@
             z-index: 0;
         }
 
+        /* Responsive Fixes (Step 2) */
+        /* This ensures layout integrity on mobile by fixing overflow and hiding the desktop sidebar view */
+        @media (max-width: 767px) { /* Targeting sm:hidden components below md (768px) */
+            body {
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
+            }
+            #main-content-wrapper {
+                /* Reset padding applied by desktop sidebar view */
+                padding-left: 0 !important;
+            }
+            /* The mobile toggle handler will manage #sidebar display */
+            #sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                z-index: 50; /* Needs to be above content */
+                transform: translateX(0);
+                /* Initial state is hidden on mobile, controlled by JS */
+                display: none;
+            }
+            /* Ensure mobile button is always visible on small screens */
+            #sidebar-toggle-mobile {
+                display: block !important;
+            }
+            /* Adjust grid in dashboard/reports for single column on mobile */
+            .grid {
+                grid-template-columns: 1fr !important;
+            }
+            /* Reduce padding on mobile for better use of space */
+            .p-6, .px-8, .py-6 {
+                padding: 1rem !important;
+            }
+            /* Adjust table fonts for mobile */
+            table {
+                font-size: 14px !important;
+            }
+            th, td {
+                padding: 8px !important;
+            }
+            /* Ensure the login screen respects the overflow fix */
+            #login-screen {
+                overflow-y: auto !important;
+            }
+        }
+        
     </style>
 </head>
 
@@ -171,31 +219,31 @@
         <span id="toast-message"></span>
     </div>
 
-    <!-- 
+    <!--
     ============================================================
     LOGIN SCREEN / SIGNUP SCREEN (Luxurious Theme)
     ============================================================
     -->
     <div id="login-screen" class="hidden flex min-h-screen items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative z-10">
-        
+
         <!-- Three.js 3D Background Canvas -->
         <canvas id="three-canvas"></canvas>
-        
+
         <!-- Subtle Gradient Overlay -->
         <div class="absolute inset-0 bg-gradient-to-t from-blue-900/60 to-transparent z-10"></div>
-        
+
         <!-- Sleek, Glassy Login Card -->
         <div class="w-full max-w-md space-y-8 z-20 backdrop-blur-xl bg-white/80 p-10 rounded-2xl shadow-2xl border border-gray-200">
-            
+
             <!-- Logo and Title -->
             <div class="animate-in fade-in slide-in-from-top-10 duration-1000">
                 <!-- Flame icon with a subtle gold glow color -->
                 <i data-lucide="flame" class="mx-auto h-14 w-auto text-blue-600" style="filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.5));" id="login-logo"></i>
-                
+
                 <h2 class="mt-6 text-center text-4xl font-bold tracking-tight text-gray-900">Satyam Refinery</h2>
                 <p class="text-center text-base text-gray-700 font-inter mt-1">Vendor Melting & Billing System</p>
             </div>
-            
+
             <!-- Loading Spinner -->
             <div id="auth-loader" class="flex flex-col justify-center items-center pt-8 pb-4">
                 <div class="spinner"></div>
@@ -203,7 +251,7 @@
                     Connecting to Refinery Network...
                 </p>
             </div>
-            
+
             <!-- Login Form (hidden by default) -->
             <form id="login-form" class="mt-8 space-y-6 hidden animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-300" action="#" method="POST">
                 <h3 class="text-center text-xl font-semibold text-gray-800">Admin Sign In</h3>
@@ -218,7 +266,7 @@
                         <input id="login-password" name="password" type="password" autocomplete="current-password" required class="relative block w-full appearance-none rounded-2xl border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-blue-600 focus:outline-none focus:ring-blue-600 transition-all duration-200 font-inter" placeholder="Password">
                     </div>
                 </div>
-                
+
                 <div class="flex items-center justify-end">
                     <div class="text-sm">
                         <a href="#" id="show-forgot-password" class="font-medium text-blue-600 hover:text-blue-700 font-inter transition-colors duration-200">
@@ -297,28 +345,27 @@
         </div>
     </div>
 
-    <!-- 
+    <!--
     ============================================================
     MAIN APPLICATION (HIDDEN BY DEFAULT)
     ============================================================
     -->
     <div id="main-app" class="hidden h-full relative overflow-hidden">
         <!-- Sidebar (desktop view) -->
-        <!-- NOTE: JS toggles 'hidden' for mobile, pl-0 on content wrapper handles no overflow when closed. -->
         <div id="sidebar" class="fixed inset-y-0 z-50 flex flex-col border-r border-gray-200 bg-white no-print sidebar-transition sidebar-expanded sm:sidebar-expanded">
             <!-- Sidebar header -->
             <div class="flex flex-shrink-0 items-center h-16 px-6 border-b border-gray-200">
                 <i data-lucide="flame" class="h-8 w-auto text-blue-600"></i>
                 <span id="sidebar-title" class="ml-3 text-xl font-semibold text-gray-900">Refinery System</span>
             </div>
-            
+
             <!-- Navigation -->
             <div class="flex flex-1 flex-col overflow-y-auto pt-5 pb-4">
                 <nav class="flex-1 space-y-2 px-4" aria-label="Sidebar">
                     <!-- Nav items will be dynamically injected here -->
                 </nav>
             </div>
-            
+
             <!-- User profile / Logout -->
             <div class="flex flex-shrink-0 border-t border-gray-200 p-4">
                 <div class="flex-shrink-0 w-full">
@@ -326,10 +373,9 @@
                         <div>
                             <img id="user-avatar" class="inline-block h-10 w-10 rounded-full" src="https://placehold.co/40x40/2563eb/ffffff?text=A" alt="Admin">
                         </div>
-                        <!-- Truncate text for narrow collapsed mode -->
-                        <div class="ml-3 min-w-0"> 
-                            <p id="user-name" class="text-base font-medium text-gray-900 truncate">Administrator</p>
-                            <p id="user-role" class="text-xs font-inter text-gray-500 truncate">User ID: <span id="user-id-display">...</span></p>
+                        <div class="ml-3">
+                            <p id="user-name" class="text-base font-medium text-gray-900">Administrator</p>
+                            <p id="user-role" class="text-xs font-inter text-gray-500">User ID: <span id="user-id-display">...</span></p>
                         </div>
                     </div>
                     <button id="logout-button" class="mt-3 w-full flex items-center justify-center rounded-2xl border border-gray-300 bg-gray-100 px-3 py-2.5 text-base font-medium text-gray-700 shadow-md hover:bg-gray-200 hover:border-red-500 hover:text-red-600">
@@ -339,21 +385,19 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Main Content Area Wrapper -->
-        <!-- Adjusted default padding from pl-72 to pl-0 for mobile responsiveness -->
-        <div id="main-content-wrapper" class="flex flex-1 flex-col pl-0 transition-[padding] duration-300 ease-in-out sm:pl-20 md:pl-72">
+        <div id="main-content-wrapper" class="flex flex-1 flex-col pl-72 transition-[padding] duration-300 ease-in-out sm:pl-20 md:pl-72">
             <!-- Header -->
             <header class="sticky top-0 z-10 flex h-16 flex-shrink-0 border-b border-gray-200 bg-white/95 backdrop-blur-sm no-print">
-                <!-- Adjusted internal padding for mobile: px-4 instead of px-6 -->
-                <div class="flex flex-1 items-center justify-between px-4 lg:px-8">
-                    
+                <div class="flex flex-1 items-center justify-between px-6 lg:px-8">
+
                     <!-- Mobile Sidebar Toggle / Page Title -->
                     <div class="flex items-center space-x-4">
-                        <button id="sidebar-toggle-mobile" type="button" class="md:hidden p-2 rounded-full text-gray-600 hover:bg-gray-200">
+                        <button id="sidebar-toggle-mobile" type="button" class="md:hidden p-2 rounded-full text-gray-600 hover:bg-gray-200" style="display: none;">
                             <i data-lucide="menu" class="h-6 w-6"></i>
                         </button>
-                        <h1 id="page-title" class="text-xl sm:text-2xl font-semibold text-gray-900 truncate">Dashboard</h1>
+                        <h1 id="page-title" class="text-2xl font-semibold text-gray-900">Dashboard</h1>
                          <!-- Live Sync Indicator -->
                         <div id="live-sync-indicator" class="flex items-center ml-4">
                             <span class="relative flex h-3 w-3 mr-2">
@@ -363,9 +407,9 @@
                             <span class="text-sm text-green-600 font-inter hidden sm:inline">Live Sync</span>
                         </div>
                     </div>
-                    
+
                     <div class="flex items-center space-x-4">
-                        
+
                         <!-- Notifications Icon -->
                         <button type="button" id="notifications-toggle" class="p-2 rounded-full text-gray-600 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 relative">
                             <i data-lucide="bell" class="h-5 w-5"></i>
@@ -383,24 +427,23 @@
 
             <!-- Main Page Content -->
             <main class="flex-1 overflow-y-auto">
-                <!-- Adjusted default padding for mobile: px-4 instead of px-8 -->
-                <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 bg-gray-50 min-h-full">
-                    
+                <div class="mx-auto max-w-7xl px-8 py-6 sm:px-8 lg:px-8 bg-gray-50 min-h-full">
+
                     <!-- NEW: Mobile Floating Add Button -->
                     <button id="mobile-float-add-button" class="fixed bottom-6 right-6 z-40 sm:hidden h-14 w-14 rounded-full bg-blue-600 text-white shadow-xl flex items-center justify-center transform transition-transform duration-300 hover:scale-105 active:scale-95 hidden">
                         <i data-lucide="plus" class="w-7 h-7"></i>
                     </button>
-                    
-                    <!-- 
+
+                    <!--
                     ================ PAGE: DASHBOARD ================
                     -->
                     <div id="page-dashboard" class="page-content space-y-8">
-                        <h2 class="text-2xl sm:text-3xl font-bold text-gray-900">Overview</h2>
-                        <!-- Stat Cards (Grid is already responsive: 1 col on mobile, 2 on sm, 5 on xl) -->
+                        <h2 class="text-3xl font-bold text-gray-900">Overview</h2>
+                        <!-- Stat Cards (Adjusted grid and spacing for consistency) -->
                         <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-5">
                             <!-- Total Vendors -->
                             <div class="bg-white shadow-2xl border border-gray-100 overflow-hidden rounded-2xl hover-lift min-w-[240px]">
-                                <div class="p-4 sm:p-6"> <!-- Adjusted padding for mobile -->
+                                <div class="p-6">
                                     <div class="flex items-start">
                                         <div class="flex-shrink-0 rounded-xl bg-blue-100 p-3 shadow-md shadow-blue-50/50">
                                             <i data-lucide="users" class="h-6 w-6 text-blue-600"></i>
@@ -408,7 +451,7 @@
                                         <div class="ml-4 w-0 flex-1">
                                             <dl>
                                                 <dt class="truncate text-sm font-medium text-gray-600 font-inter">Total Vendors</dt>
-                                                <dd class="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 mt-1" id="stat-total-vendors">0</dd>
+                                                <dd class="text-4xl font-bold tracking-tight text-gray-900 mt-1" id="stat-total-vendors">0</dd>
                                             </dl>
                                         </div>
                                     </div>
@@ -416,7 +459,7 @@
                             </div>
                             <!-- Jobs This Month -->
                             <div class="bg-white shadow-2xl border border-gray-100 overflow-hidden rounded-2xl hover-lift min-w-[240px]">
-                                <div class="p-4 sm:p-6"> <!-- Adjusted padding for mobile -->
+                                <div class="p-6">
                                     <div class="flex items-start">
                                         <div class="flex-shrink-0 rounded-xl bg-green-100 p-3 shadow-md shadow-green-50/50">
                                             <i data-lucide="calendar-days" class="h-6 w-6 text-green-600"></i>
@@ -424,7 +467,7 @@
                                         <div class="ml-4 w-0 flex-1">
                                             <dl>
                                                 <dt class="truncate text-sm font-medium text-gray-600 font-inter">Jobs This Month</dt>
-                                                <dd class="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 mt-1" id="stat-month-jobs">0</dd>
+                                                <dd class="text-4xl font-bold tracking-tight text-gray-900 mt-1" id="stat-month-jobs">0</dd>
                                             </dl>
                                         </div>
                                     </div>
@@ -432,7 +475,7 @@
                             </div>
                             <!-- Pending Jobs -->
                             <div class="bg-white shadow-2xl border border-gray-100 overflow-hidden rounded-2xl hover-lift min-w-[240px]">
-                                <div class="p-4 sm:p-6"> <!-- Adjusted padding for mobile -->
+                                <div class="p-6">
                                     <div class="flex items-start">
                                         <div class="flex-shrink-0 rounded-xl bg-yellow-100 p-3 shadow-md shadow-yellow-50/50">
                                             <i data-lucide="clock" class="h-6 w-6 text-yellow-600"></i>
@@ -440,7 +483,7 @@
                                         <div class="ml-4 w-0 flex-1">
                                             <dl>
                                                 <dt class="truncate text-sm font-medium text-gray-600 font-inter">Pending Jobs</dt>
-                                                <dd class="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 mt-1" id="stat-pending-jobs">0</dd>
+                                                <dd class="text-4xl font-bold tracking-tight text-gray-900 mt-1" id="stat-pending-jobs">0</dd>
                                             </dl>
                                         </div>
                                     </div>
@@ -448,7 +491,7 @@
                             </div>
                             <!-- Unbilled Jobs -->
                             <div class="bg-white shadow-2xl border border-gray-100 overflow-hidden rounded-2xl hover-lift min-w-[240px]">
-                                <div class="p-4 sm:p-6"> <!-- Adjusted padding for mobile -->
+                                <div class="p-6">
                                     <div class="flex items-start">
                                         <div class="flex-shrink-0 rounded-xl bg-red-100 p-3 shadow-md shadow-red-50/50">
                                             <i data-lucide="receipt" class="h-6 w-6 text-red-600"></i>
@@ -456,7 +499,7 @@
                                         <div class="ml-4 w-0 flex-1">
                                             <dl>
                                                 <dt class="truncate text-sm font-medium text-gray-600 font-inter">Pending Bills</dt>
-                                                <dd class="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 mt-1" id="stat-unbilled-jobs">0</dd>
+                                                <dd class="text-4xl font-bold tracking-tight text-gray-900 mt-1" id="stat-unbilled-jobs">0</dd>
                                             </dl>
                                         </div>
                                     </div>
@@ -464,7 +507,7 @@
                             </div>
                             <!-- NEW STAT: Total Net Output -->
                             <div class="bg-white shadow-2xl border border-gray-100 overflow-hidden rounded-2xl hover-lift min-w-[240px]">
-                                <div class="p-4 sm:p-6"> <!-- Adjusted padding for mobile -->
+                                <div class="p-6">
                                     <div class="flex items-start">
                                         <div class="flex-shrink-0 rounded-xl bg-purple-100 p-3 shadow-md shadow-purple-50/50">
                                             <i data-lucide="scale" class="h-6 w-6 text-purple-600"></i>
@@ -472,38 +515,36 @@
                                         <div class="ml-4 w-0 flex-1">
                                             <dl>
                                                 <dt class="truncate text-sm font-medium text-gray-600 font-inter">Total Net Output (g)</dt>
-                                                <dd class="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 mt-1" id="stat-total-net-output">0</dd>
+                                                <dd class="text-4xl font-bold tracking-tight text-gray-900 mt-1" id="stat-total-net-output">0</dd>
                                             </dl>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        
+
                         <!-- Chart -->
-                        <div class="bg-white shadow-2xl border border-gray-100 rounded-2xl p-4 sm:p-6"> <!-- Adjusted padding for mobile -->
-                            <h3 class="text-lg sm:text-xl font-semibold leading-relaxed text-gray-900">Recent Job Weights (Last 10)</h3>
+                        <div class="bg-white shadow-2xl border border-gray-100 rounded-2xl p-6">
+                            <h3 class="text-xl font-semibold leading-relaxed text-gray-900">Recent Job Weights (Last 10)</h3>
                             <p class="text-sm text-gray-600 font-inter mb-4">Gross vs. Net weight comparison for recently completed jobs.</p>
-                            <div class="h-[300px] sm:h-[400px]"> <!-- Reduced chart height slightly for mobile -->
+                            <div class="h-[400px]">
                                 <canvas id="melting-chart" class="mt-4"></canvas>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 
+                    <!--
                     ================ PAGE: VENDOR MANAGEMENT ================
                     -->
                     <div id="page-vendors" class="page-content hidden">
                         <div class="bg-white shadow-2xl border border-gray-100 overflow-hidden rounded-2xl">
-                            <div class="p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-center border-b border-gray-200 gap-4"> <!-- Adjusted padding for mobile -->
+                            <div class="p-6 flex flex-col sm:flex-row justify-between items-center border-b border-gray-200 gap-4">
                                 <label for="vendor-search" class="sr-only">Search vendors</label>
-                                <!-- Made search full width on mobile -->
                                 <input type="text" id="vendor-search" class="block w-full sm:w-1/3 rounded-2xl border-gray-300 bg-gray-50 text-gray-900 shadow-sm focus:border-blue-600 focus:ring-blue-600 placeholder-gray-500 px-4 py-3 font-inter" placeholder="Search by name or mobile...">
-                                <button id="vendor-export-csv-button" data-type="vendor" class="inline-flex items-center rounded-2xl border w-full sm:w-auto border-gray-300 bg-white px-5 py-3 text-base font-medium text-gray-700 shadow-md hover:bg-gray-100 transition-all duration-200 hover:scale-[1.02]">
+                                <button id="vendor-export-csv-button" data-type="vendor" class="inline-flex items-center rounded-2xl border border-gray-300 bg-white px-5 py-3 text-base font-medium text-gray-700 shadow-md hover:bg-gray-100 transition-all duration-200 hover:scale-[1.02]">
                                     <i data-lucide="file-text" class="w-4 h-4 mr-2"></i> Export CSV
                                 </button>
                             </div>
-                            <!-- overflow-x-auto handles horizontal scroll on tables for mobile -->
                             <div class="overflow-x-auto">
                                 <table class="min-w-full divide-y divide-gray-200">
                                     <thead>
@@ -529,13 +570,12 @@
                         </div>
                     </div>
 
-                    <!-- 
+                    <!--
                     ================ PAGE: MELTING RECORDS ================
                     -->
                     <div id="page-melting-records" class="page-content hidden">
                          <div class="bg-white shadow-2xl border border-gray-100 overflow-hidden rounded-2xl">
-                            <div class="p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-center border-b border-gray-200 gap-4"> <!-- Adjusted padding for mobile -->
-                                <!-- Filter made full width on mobile -->
+                            <div class="p-6 flex flex-col sm:flex-row justify-between items-center border-b border-gray-200 gap-4">
                                 <div class="w-full sm:w-1/3">
                                     <label for="purity-filter" class="sr-only">Purity Filter</label>
                                     <select id="purity-filter" class="block w-full rounded-2xl border-gray-300 bg-gray-50 text-gray-900 shadow-sm focus:border-blue-600 focus:ring-blue-600 sm:text-base px-4 py-3 font-inter">
@@ -545,11 +585,10 @@
                                         <option value="low">Purity < 90%</option>
                                     </select>
                                 </div>
-                                <button id="jobs-export-csv-button" data-type="meltingJob" class="inline-flex items-center rounded-2xl border w-full sm:w-auto border-gray-300 bg-white px-5 py-3 text-base font-medium text-gray-700 shadow-md hover:bg-gray-100 transition-all duration-200 hover:scale-[1.02]">
+                                <button id="jobs-export-csv-button" data-type="meltingJob" class="inline-flex items-center rounded-2xl border border-gray-300 bg-white px-5 py-3 text-base font-medium text-gray-700 shadow-md hover:bg-gray-100 transition-all duration-200 hover:scale-[1.02]">
                                     <i data-lucide="file-text" class="w-4 h-4 mr-2"></i> Export CSV
                                 </button>
                             </div>
-                            <!-- overflow-x-auto handles horizontal scroll on tables for mobile -->
                             <div class="overflow-x-auto">
                                 <table class="min-w-full divide-y divide-gray-200">
                                     <thead>
@@ -577,11 +616,11 @@
                         </div>
                     </div>
 
-                    <!-- 
+                    <!--
                     ================ NEW PAGE: INVENTORY TRACKING ================
                     -->
                     <div id="page-inventory" class="page-content hidden space-y-8">
-                        <!-- Summary Panel (Grid is responsive: 1 col on mobile, 3 on sm) -->
+                        <!-- Summary Panel -->
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
                             <!-- Total Inventory Weight -->
                             <div class="bg-white shadow-2xl border border-gray-100 overflow-hidden rounded-2xl p-6 hover-lift">
@@ -602,12 +641,10 @@
 
                         <!-- Inventory Table -->
                         <div class="bg-white shadow-2xl border border-gray-100 overflow-hidden rounded-2xl">
-                            <div class="p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-center border-b border-gray-200 gap-4"> <!-- Adjusted padding for mobile -->
+                            <div class="p-6 flex flex-col sm:flex-row justify-between items-center border-b border-gray-200 gap-4">
                                 <label for="inventory-search" class="sr-only">Search inventory</label>
-                                <!-- Made search full width on mobile -->
                                 <input type="text" id="inventory-search" class="block w-full sm:w-1/3 rounded-2xl border-gray-300 bg-gray-50 text-gray-900 shadow-sm focus:border-blue-600 focus:ring-blue-600 placeholder-gray-500 px-4 py-2.5 font-inter">
                             </div>
-                            <!-- overflow-x-auto handles horizontal scroll on tables for mobile -->
                             <div class="overflow-x-auto">
                                 <table class="min-w-full divide-y divide-gray-200">
                                     <thead>
@@ -632,11 +669,11 @@
                         </div>
                     </div>
 
-                    <!-- 
+                    <!--
                     ================ NEW PAGE: PURCHASE ORDERS ================
                     -->
                     <div id="page-purchase-orders" class="page-content hidden space-y-8">
-                         <!-- Summary Panel (Grid is responsive: 1 col on mobile, 3 on sm) -->
+                         <!-- Summary Panel -->
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
                             <!-- Total Orders -->
                             <div class="bg-white shadow-2xl border border-gray-100 overflow-hidden rounded-2xl p-6 hover-lift">
@@ -657,12 +694,10 @@
 
                         <!-- PO Table -->
                          <div class="bg-white shadow-2xl border border-gray-100 overflow-hidden rounded-2xl">
-                            <div class="p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-center border-b border-gray-200 gap-4"> <!-- Adjusted padding for mobile -->
+                            <div class="p-6 flex flex-col sm:flex-row justify-between items-center border-b border-gray-200 gap-4">
                                 <label for="po-search" class="sr-only">Search orders</label>
-                                <!-- Made search full width on mobile -->
                                 <input type="text" id="po-search" class="block w-full sm:w-1/3 rounded-2xl border-gray-300 bg-gray-50 text-gray-900 shadow-sm focus:border-blue-600 focus:ring-blue-600 placeholder-gray-500 px-4 py-2.5 font-inter">
                             </div>
-                            <!-- overflow-x-auto handles horizontal scroll on tables for mobile -->
                             <div class="overflow-x-auto">
                                 <table class="min-w-full divide-y divide-gray-200">
                                     <thead>
@@ -688,13 +723,13 @@
                         </div>
                     </div>
 
-                    <!-- 
+                    <!--
                     ================ PAGE: BILLING SYSTEM ================
                     -->
                     <div id="page-billing" class="page-content hidden space-y-8">
-                        <div class="bg-white shadow-2xl border border-gray-100 rounded-2xl p-4 sm:p-6"> <!-- Adjusted padding for mobile -->
+                        <div class="bg-white shadow-2xl border border-gray-100 rounded-2xl p-6">
                             <h3 class="text-xl font-semibold text-gray-900">Generate Customer Bill</h3>
-                            <div class="mt-4 max-w-full sm:max-w-md"> <!-- Ensure full width on mobile -->
+                            <div class="mt-4 max-w-md">
                                 <label for="billing-vendor-select" class="block text-sm font-medium text-gray-700">Select Vendor</label>
                                 <select id="billing-vendor-select" class="mt-1 block w-full rounded-2xl border-gray-300 bg-white py-3 pl-3 pr-10 text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-blue-600 sm:text-sm font-inter">
                                     <option value="">Select a vendor...</option>
@@ -702,25 +737,24 @@
                                 </select>
                             </div>
                         </div>
-                        
+
                         <div id="billing-jobs-section" class="hidden bg-white shadow-2xl border border-gray-100 overflow-hidden rounded-2xl">
-                            <div class="p-4 sm:p-6 border-b border-gray-200"> <!-- Adjusted padding for mobile -->
+                            <div class="p-6 border-b border-gray-200">
                                 <h3 class="text-xl font-semibold text-gray-900" id="billing-vendor-name">Unbilled Jobs for...</h3>
                             </div>
-                            
-                            <!-- NEW: Quick Bill Summary (Grid is responsive: 2 cols on mobile) -->
-                            <div class="p-4 sm:p-6 grid grid-cols-2 gap-4 bg-gray-50"> <!-- Adjusted padding for mobile -->
+
+                            <!-- NEW: Quick Bill Summary -->
+                            <div class="p-6 grid grid-cols-2 gap-4 bg-gray-50">
                                 <div>
                                     <p class="text-sm font-medium text-gray-600 font-inter">Selected Gross Weight</p>
-                                    <p id="bill-summary-gross" class="text-xl sm:text-2xl font-bold text-gray-900">0.00 g</p>
+                                    <p id="bill-summary-gross" class="text-2xl font-bold text-gray-900">0.00 g</p>
                                 </div>
                                 <div>
                                     <p class="text-sm font-medium text-gray-600 font-inter">Selected Net Weight</p>
-                                    <p id="bill-summary-net" class="text-xl sm:text-2xl font-bold text-gray-900">0.00 g</p>
+                                    <p id="bill-summary-net" class="text-2xl font-bold text-gray-900">0.00 g</p>
                                 </div>
                             </div>
-                            
-                            <!-- overflow-x-auto handles horizontal scroll on tables for mobile -->
+
                             <div class="overflow-x-auto">
                                 <table class="min-w-full divide-y divide-gray-200">
                                     <thead>
@@ -744,65 +778,63 @@
                                 <i data-lucide="info" class="mx-auto h-12 w-12 text-gray-400"></i>
                                 <h3 class="mt-2 text-lg font-medium text-gray-900">No unbilled jobs for this vendor.</h3>
                             </div>
-                            <div class="flex flex-col sm:flex-row items-center justify-between bg-gray-50 p-4 sm:p-6 gap-4"> <!-- Stack on mobile -->
+                            <div class="flex items-center justify-between bg-gray-50 p-6">
                                 <div class="text-base font-medium text-gray-700">
                                     Total Selected Charge: <span id="billing-total-charge" class="text-2xl font-bold text-blue-600">₹0.00</span>
                                 </div>
-                                <button id="generate-bill-button" class="rounded-2xl border border-transparent bg-blue-600 px-4 py-3 text-base font-medium text-white shadow-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-[1.02] w-full sm:w-auto"> <!-- Full width on mobile -->
+                                <button id="generate-bill-button" class="rounded-2xl border border-transparent bg-blue-600 px-4 py-3 text-base font-medium text-white shadow-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-[1.02]" disabled>
                                     Generate Bill
                                 </button>
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- 
+
+                    <!--
                     ================ PAGE: REPORTS & ANALYTICS ================
                     -->
                     <div id="page-reports" class="page-content space-y-8">
                         <!-- Gradient Header for Reports -->
-                        <div class="rounded-2xl p-4 sm:p-6 bg-gradient-to-r from-blue-600 to-indigo-500 shadow-2xl"> <!-- Adjusted padding for mobile -->
-                             <h2 class="text-2xl sm:text-3xl font-bold text-white mb-1">Performance Analytics</h2>
-                             <p class="text-sm sm:text-base text-blue-100 font-inter">Visualize melting trends, purity metrics, and monthly revenue performance.</p>
+                        <div class="rounded-2xl p-6 bg-gradient-to-r from-blue-600 to-indigo-500 shadow-2xl">
+                             <h2 class="text-3xl font-bold text-white mb-1">Performance Analytics</h2>
+                             <p class="text-base text-blue-100 font-inter">Visualize melting trends, purity metrics, and monthly revenue performance.</p>
                         </div>
-                        
+
                         <!-- FIX: Scrollable container for charts -->
-                        <div class="max-h-[calc(100vh-250px)] overflow-y-auto space-y-8 pr-2"> 
-                            <!-- Grid is responsive: 1 col on mobile, 2 on lg -->
+                        <div class="max-h-[calc(100vh-250px)] overflow-y-auto space-y-8 pr-2">
                             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 <!-- Monthly Melting Trend Chart -->
-                                <div class="bg-white shadow-2xl border border-gray-100 rounded-2xl p-4 sm:p-6 hover-lift"> <!-- Adjusted padding for mobile -->
+                                <div class="bg-white shadow-2xl border border-gray-100 rounded-2xl p-6 hover-lift">
                                     <h3 class="text-xl font-semibold text-gray-900">Monthly Melting Trend (Net Output)</h3>
                                     <p class="text-sm text-gray-600 font-inter mb-4">Total net silver output in grams per month.</p>
-                                    <div class="h-[350px] min-h-[300px] lg:h-[450px]"><canvas id="reports-monthly-melting"></canvas></div> <!-- Minimized height for mobile -->
+                                    <div class="h-[450px] min-h-[400px]"><canvas id="reports-monthly-melting"></canvas></div>
                                 </div>
-                                
+
                                 <!-- Purity Distribution Chart -->
-                                <div class="bg-white shadow-2xl border border-gray-100 rounded-2xl p-4 sm:p-6 hover-lift"> <!-- Adjusted padding for mobile -->
+                                <div class="bg-white shadow-2xl border border-gray-100 rounded-2xl p-6 hover-lift">
                                     <h3 class="text-xl font-semibold text-gray-900">Job Purity Distribution</h3>
                                     <p class="text-sm text-gray-600 font-inter mb-4">Breakdown of completed jobs by purity level.</p>
-                                    <div class="h-[350px] min-h-[300px] lg:h-[450px] flex items-center justify-center"><canvas id="reports-purity-distribution"></canvas></div> <!-- Minimized height for mobile -->
+                                    <div class="h-[450px] min-h-[400px] flex items-center justify-center"><canvas id="reports-purity-distribution"></canvas></div>
                                 </div>
-                                
+
                                 <!-- Monthly Revenue Chart -->
-                                <div class="lg:col-span-2 bg-white shadow-2xl border border-gray-100 rounded-2xl p-4 sm:p-6 hover-lift"> <!-- Adjusted padding for mobile -->
+                                <div class="lg:col-span-2 bg-white shadow-2xl border border-gray-100 rounded-2xl p-6 hover-lift">
                                     <h3 class="text-xl font-semibold text-gray-900">Monthly Revenue Trend</h3>
                                     <p class="text-sm text-gray-600 font-inter mb-4">Total melting charges billed per month.</p>
-                                    <div class="h-[350px] min-h-[300px] lg:h-[450px]"><canvas id="reports-monthly-revenue"></canvas></div> <!-- Minimized height for mobile -->
+                                    <div class="h-[450px] min-h-[400px]"><canvas id="reports-monthly-revenue"></canvas></div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- 
+
+                    <!--
                     ================ NEW PAGE: USER MANAGEMENT (Simulated) ================
                     -->
                     <div id="page-user-mgmt" class="page-content hidden space-y-8">
                         <div class="bg-white shadow-2xl border border-gray-100 overflow-hidden rounded-2xl">
-                            <div class="p-4 sm:p-6 border-b border-gray-200"> <!-- Adjusted padding for mobile -->
+                            <div class="p-6 border-b border-gray-200">
                                 <h3 class="text-xl font-semibold text-gray-900">System Users (Simulated)</h3>
                                 <p class="text-sm text-gray-600 font-inter mt-1">Manage user roles and permissions within the application.</p>
                             </div>
-                            <!-- overflow-x-auto handles horizontal scroll on tables for mobile -->
                             <div class="overflow-x-auto">
                                 <table class="min-w-full divide-y divide-gray-200">
                                     <thead>
@@ -826,13 +858,13 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- 
+
+                    <!--
                     ================ NEW PAGE: NOTIFICATIONS ================
                     -->
                     <div id="page-notifications" class="page-content hidden space-y-8">
                         <div class="bg-white shadow-2xl border border-gray-100 overflow-hidden rounded-2xl">
-                            <div class="p-4 sm:p-6 border-b border-gray-200"> <!-- Adjusted padding for mobile -->
+                            <div class="p-6 border-b border-gray-200">
                                 <h3 class="text-xl font-semibold text-gray-900">Real-time Business Alerts</h3>
                                 <p class="text-sm text-gray-600 font-inter mt-1">System-generated notifications requiring immediate attention.</p>
                             </div>
@@ -847,21 +879,20 @@
                         </div>
                     </div>
 
-                    <!-- 
+                    <!--
                     ================ PAGE: MY PROFILE ================
                     -->
                     <div id="page-profile" class="page-content hidden space-y-8">
-                        <!-- Grid is responsive: 1 col on mobile, 3 on lg -->
                         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                             <!-- Column 1: Profile Card -->
                             <div class="lg:col-span-1 space-y-6">
                                 <div class="bg-white shadow-2xl border border-gray-100 overflow-hidden rounded-2xl hover-lift">
-                                    <div class="p-4 sm:p-6 flex flex-col items-center"> <!-- Adjusted padding for mobile -->
+                                    <div class="p-6 flex flex-col items-center">
                                         <img id="profile-avatar-img" class="h-24 w-24 rounded-full" src="https://placehold.co/96x96/2563eb/ffffff?text=A" alt="User Avatar">
                                         <h3 class="mt-4 text-2xl font-bold text-gray-900" id="profile-name-display">Administrator</h3>
                                         <p class="mt-1 text-base text-gray-600 font-inter" id="profile-email-display">admin@example.com</p>
                                     </div>
-                                    <div class="border-t border-gray-200 px-4 sm:px-6 py-4 space-y-2 font-inter"> <!-- Adjusted padding for mobile -->
+                                    <div class="border-t border-gray-200 px-6 py-4 space-y-2 font-inter">
                                         <div class="flex justify-between text-sm">
                                             <span class="font-medium text-gray-600">Joined:</span>
                                             <span class="font-medium text-gray-900" id="profile-joined-display">...</span>
@@ -874,10 +905,10 @@
                                 </div>
 
                                 <div class="bg-white shadow-2xl border border-gray-100 overflow-hidden rounded-2xl hover-lift">
-                                    <div class="p-4 sm:p-6 border-b border-gray-200"> <!-- Adjusted padding for mobile -->
+                                    <div class="p-6 border-b border-gray-200">
                                         <h3 class="text-xl font-semibold text-gray-900">Your Activity Stats</h3>
                                     </div>
-                                    <div class="p-4 sm:p-6 space-y-4"> <!-- Adjusted padding for mobile -->
+                                    <div class="p-6 space-y-4">
                                         <div class="flex items-center">
                                             <div class="flex-shrink-0 rounded-xl bg-blue-100 p-3 shadow-md shadow-blue-50/50">
                                                 <i data-lucide="users" class="h-6 w-6 text-blue-600"></i>
@@ -903,10 +934,10 @@
                             <!-- Column 2: Settings -->
                             <div class="lg:col-span-2 space-y-6">
                                 <div class="bg-white shadow-2xl border border-gray-100 overflow-hidden rounded-2xl">
-                                    <div class="p-4 sm:p-6 border-b border-gray-200"> <!-- Adjusted padding for mobile -->
+                                    <div class="p-6 border-b border-gray-200">
                                         <h3 class="text-xl font-semibold text-gray-900">Profile Settings</h3>
                                     </div>
-                                    <form id="profile-name-form" class="p-4 sm:p-6 space-y-6"> <!-- Adjusted padding for mobile -->
+                                    <form id="profile-name-form" class="p-6 space-y-6">
                                         <div>
                                             <label for="profile-name-input" class="block text-sm font-medium text-gray-700">Display Name</label>
                                             <input type="text" id="profile-name-input" name="displayName" class="mt-1 block w-full max-w-xs rounded-2xl border-gray-300 bg-gray-50 text-gray-900 shadow-sm sm:text-base px-4 py-3 focus:border-blue-600 focus:ring-blue-600 font-inter">
@@ -921,10 +952,10 @@
                                 </div>
 
                                 <div class="bg-white shadow-2xl border border-gray-100 overflow-hidden rounded-2xl">
-                                    <div class="p-4 sm:p-6 border-b border-gray-200"> <!-- Adjusted padding for mobile -->
+                                    <div class="p-6 border-b border-gray-200">
                                         <h3 class="text-xl font-semibold text-gray-900">Security</h3>
                                     </div>
-                                    <div class="p-4 sm:p-6 space-y-6"> <!-- Adjusted padding for mobile -->
+                                    <div class="p-6 space-y-6">
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700">Password</label>
                                             <p class="mt-1 text-sm text-gray-600 font-inter">To change your password, we'll send a reset link to your email address.</p>
@@ -943,15 +974,15 @@
                     </div>
 
 
-                    <!-- 
+                    <!--
                     ================ PAGE: SETTINGS ================
                     -->
                     <div id="page-settings" class="page-content hidden space-y-8">
                         <div class="bg-white shadow-2xl border border-gray-100 overflow-hidden rounded-2xl">
-                            <div class="p-4 sm:p-6 border-b border-gray-200"> <!-- Adjusted padding for mobile -->
+                            <div class="p-6 border-b border-gray-200">
                                 <h3 class="text-xl font-semibold text-gray-900">Application Settings</h3>
                             </div>
-                            <form id="settings-form" class="p-4 sm:p-6 space-y-6"> <!-- Adjusted padding for mobile -->
+                            <form id="settings-form" class="p-6 space-y-6">
                                 <div>
                                     <label for="setting-melting-charge" class="block text-sm font-medium text-gray-700">Melting Charge per KG (₹)</label>
                                     <input type="number" step="0.01" id="setting-melting-charge" name="meltingChargePerKg" class="mt-1 block w-full max-w-xs rounded-2xl border-gray-300 bg-gray-50 text-gray-900 shadow-sm sm:text-base px-4 py-3 focus:border-blue-600 focus:ring-blue-600 font-inter">
@@ -976,13 +1007,13 @@
                 </div>
             </main>
         </div>
-        
+
         <!-- Mobile Sidebar Overlay -->
         <div id="mobile-sidebar-overlay" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden"></div>
     </div>
 
 
-    <!-- 
+    <!--
     ============================================================
     MODALS
     ============================================================
@@ -990,54 +1021,50 @@
 
     <!-- Generic Form Modal -->
     <div id="form-modal" class="modal fixed inset-0 z-50 flex items-center justify-center bg-black/60 opacity-0 transition-opacity duration-300 ease-in-out pointer-events-none no-print">
-        <!-- Added w-[95%] for mobile, then max-w-xl on small screens and up -->
-        <div class="modal-content max-h-[90vh] w-[95%] sm:max-w-xl transform rounded-2xl bg-white shadow-2xl transition-all border border-gray-200">
-            <div class="flex items-center justify-between border-b border-gray-200 p-4 sm:p-6">
+        <div class="modal-content max-h-[90vh] w-full max-w-xl transform rounded-2xl bg-white shadow-2xl transition-all border border-gray-200">
+            <div class="flex items-center justify-between border-b border-gray-200 p-6">
                 <h3 class="text-xl font-semibold text-gray-900" id="modal-title">Modal Title</h3>
                 <button id="modal-close-button" class="text-gray-500 hover:text-gray-800 p-1">
                     <i data-lucide="x" class="h-6 w-6"></i>
                 </button>
             </div>
-            <form id="modal-form" class="overflow-y-auto max-h-[calc(90vh-140px)] p-4 sm:p-6">
+            <form id="modal-form" class="overflow-y-auto max-h-[calc(90vh-140px)] p-6">
                 <!-- Form content will be injected by JS -->
             </form>
-            <div class="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3 border-t border-gray-200 bg-gray-50 p-4 sm:p-6 rounded-b-2xl">
-                <button id="modal-cancel-button" type="button" class="rounded-2xl border border-gray-300 bg-white px-5 py-3 text-base font-medium text-gray-700 shadow-md hover:bg-gray-100 order-2 sm:order-1">Cancel</button>
-                <button id="modal-save-button" type="submit" form="modal-form" class="rounded-2xl border border-transparent bg-blue-600 px-5 py-3 text-base font-medium text-white shadow-md hover:bg-blue-700 transition-all duration-200 hover:scale-[1.02] order-1 sm:order-2">Save</button>
+            <div class="flex justify-end space-x-3 border-t border-gray-200 bg-gray-50 p-6 rounded-b-2xl">
+                <button id="modal-cancel-button" type="button" class="rounded-2xl border border-gray-300 bg-white px-5 py-3 text-base font-medium text-gray-700 shadow-md hover:bg-gray-100">Cancel</button>
+                <button id="modal-save-button" type="submit" form="modal-form" class="rounded-2xl border border-transparent bg-blue-600 px-5 py-3 text-base font-medium text-white shadow-md hover:bg-blue-700 transition-all duration-200 hover:scale-[1.02]">Save</button>
             </div>
         </div>
     </div>
 
     <!-- Delete Confirmation Modal -->
     <div id="delete-modal" class="modal fixed inset-0 z-50 flex items-center justify-center bg-black/60 opacity-0 transition-opacity duration-300 ease-in-out pointer-events-none no-print">
-        <!-- Added w-[95%] for mobile, then max-w-md on small screens and up -->
-        <div class="modal-content w-[95%] sm:max-w-md transform rounded-2xl bg-white shadow-2xl transition-all border border-gray-200">
+        <div class="modal-content w-full max-w-md transform rounded-2xl bg-white shadow-2xl transition-all border border-gray-200">
             <div class="p-8 text-center">
                 <i data-lucide="alert-triangle" class="mx-auto h-12 w-12 text-red-500"></i>
                 <h3 class="mt-4 text-xl font-semibold text-gray-900">Delete Record?</h3>
                 <p class="mt-2 text-base text-gray-600 font-inter">Are you sure you want to delete this record? This action cannot be undone.</p>
-                <div class="mt-6 flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4">
+                <div class="mt-6 flex justify-center space-x-4">
                     <button id="delete-cancel-button" class="rounded-2xl border border-gray-300 bg-white px-5 py-3 text-base font-medium text-gray-700 shadow-md hover:bg-gray-100">Cancel</button>
                     <button id="delete-confirm-button" class="rounded-2xl border border-transparent bg-red-600 px-5 py-3 text-base font-medium text-white shadow-md hover:bg-red-700">Delete</button>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <!-- Bill Modal (Bill content container ID set to bill-print-area for PDF) -->
     <div id="bill-modal" class="modal fixed inset-0 z-50 flex items-center justify-center bg-black/60 opacity-0 transition-opacity duration-300 ease-in-out pointer-events-none no-print">
-        <!-- Added w-[95%] for mobile, then max-w-3xl on small screens and up -->
-        <div class="modal-content max-h-[90vh] w-[95%] sm:max-w-3xl transform rounded-2xl bg-white shadow-2xl transition-all border border-gray-200">
-            <div class="flex items-center justify-between border-b border-gray-200 p-4 sm:p-6 no-print">
+        <div class="modal-content max-h-[90vh] w-full max-w-3xl transform rounded-2xl bg-white shadow-2xl transition-all border border-gray-200">
+            <div class="flex items-center justify-between border-b border-gray-200 p-6 no-print">
                 <h3 class="text-xl font-semibold text-gray-900" id="bill-modal-title">Generated Bill</h3>
                 <button id="bill-modal-close-button" class="text-gray-500 hover:text-gray-800 p-1">
                     <i data-lucide="x" class="h-6 w-6"></i>
                 </button>
             </div>
-            
+
             <!-- Printable Area (Container for PDF Export) -->
-            <!-- Adjusted padding for mobile: p-4 instead of p-8 -->
-            <div id="bill-print-area" class="overflow-y-auto max-h-[calc(90vh-140px)] p-4 sm:p-8 bg-white text-black font-inter relative">
+            <div id="bill-print-area" class="overflow-y-auto max-h-[calc(90vh-140px)] p-8 bg-white text-black font-inter relative">
                 <style>
                     /* Scoped styles just for printing, to ensure no dark-mode overrides */
                     #bill-print-area, #bill-print-area * {
@@ -1060,8 +1087,7 @@
                     }
                 </style>
                 <div class="relative z-10"> <!-- Content wrapper to sit above watermark -->
-                    <!-- Stack logo/info and bill title vertically on mobile -->
-                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b pb-4 border-gray-300 space-y-4 md:space-y-0">
+                    <div class="flex justify-between items-center border-b pb-4 border-gray-300">
                         <div>
                             <div class="flex items-center space-x-2">
                                 <!-- UPDATED LOGO: flame icon with blue color for print -->
@@ -1072,25 +1098,23 @@
                             <p class="text-sm text-gray-600">Santkabir Road, Jalganga Choke, Rajkot, Gujarat</p>
                             <p class="text-sm text-gray-600">Mobile: 9426979892</p>
                         </div>
-                        <div class="text-left md:text-right">
+                        <div class="text-right">
                             <h3 class="text-2xl font-semibold text-gray-800">MELTING BILL</h3>
                             <p class="text-sm text-gray-600">Bill ID: <span id="bill-id"></span></p>
                         </div>
                     </div>
-                    <!-- Stack bill-to/bill-date vertically on mobile -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+                    <div class="grid grid-cols-2 gap-4 mt-6">
                         <div>
                             <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Bill To:</h4>
                             <p class="text-lg font-medium text-gray-900" id="bill-vendor-name-display"></p>
                             <p class="text-gray-600" id="bill-vendor-phone"></p>
                             <p class="text-gray-600" id="bill-vendor-address"></p>
                         </div>
-                        <div class="sm:text-right">
+                        <div class="text-right">
                             <p class="text-gray-600">Bill Date: <span class="font-medium text-gray-900" id="bill-date"></span></p>
                         </div>
                     </div>
                     <div class="mt-8 flow-root">
-                        <!-- overflow-x-auto ensures table scrolls horizontally on small devices -->
                         <div class="-my-2 overflow-x-auto">
                             <div class="inline-block min-w-full py-2 align-middle">
                                 <table class="min-w-full divide-y divide-gray-300">
@@ -1132,13 +1156,13 @@
                     </div>
                 </div>
             </div>
-            
-            <div class="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3 border-t border-gray-200 bg-gray-50 p-4 sm:p-6 rounded-b-2xl no-print">
-                <button id="bill-print-browser-button" type="button" class="inline-flex items-center justify-center rounded-2xl border border-gray-300 bg-white px-5 py-3 text-base font-medium text-gray-700 shadow-md hover:bg-gray-100 transition-all duration-200 hover:scale-[1.02] w-full sm:w-auto">
+
+            <div class="flex justify-end space-x-3 border-t border-gray-200 bg-gray-50 p-6 rounded-b-2xl no-print">
+                <button id="bill-print-browser-button" type="button" class="inline-flex items-center rounded-2xl border border-gray-300 bg-white px-5 py-3 text-base font-medium text-gray-700 shadow-md hover:bg-gray-100 transition-all duration-200 hover:scale-[1.02]">
                     <i data-lucide="printer" class="w-5 h-5 mr-2"></i>
                     Print Bill
                 </button>
-                <button id="bill-pdf-button" type="button" class="inline-flex items-center justify-center rounded-2xl border border-transparent bg-blue-600 px-5 py-3 text-base font-medium text-white shadow-lg hover:bg-blue-700 transition-all duration-200 hover:scale-[1.02] w-full sm:w-auto">
+                <button id="bill-pdf-button" type="button" class="inline-flex items-center rounded-2xl border border-transparent bg-blue-600 px-5 py-3 text-base font-medium text-white shadow-lg hover:bg-blue-700 transition-all duration-200 hover:scale-[1.02]">
                     <i data-lucide="download" class="w-5 h-5 mr-2"></i>
                     Download PDF
                 </button>
@@ -1147,20 +1171,20 @@
     </div>
 
 
-    <!-- 
+    <!--
     ============================================================
     ============================================================
     APPLICATION JAVASCRIPT
     ============================================================
     ============================================================
     -->
-    
+
     <!-- Firebase SDK Imports -->
     <script type="module">
         // Import Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { 
-            getAuth, 
+        import {
+            getAuth,
             onAuthStateChanged,
             signOut,
             createUserWithEmailAndPassword,
@@ -1170,18 +1194,18 @@
             signInWithCustomToken,
             signInAnonymously
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { 
-            getFirestore, 
-            doc, 
-            getDoc, 
-            addDoc, 
-            setDoc, 
-            updateDoc, 
-            deleteDoc, 
-            onSnapshot, 
-            collection, 
-            query, 
-            where, 
+        import {
+            getFirestore,
+            doc,
+            getDoc,
+            addDoc,
+            setDoc,
+            updateDoc,
+            deleteDoc,
+            onSnapshot,
+            collection,
+            query,
+            where,
             getDocs,
             writeBatch,
             setLogLevel,
@@ -1194,7 +1218,7 @@
         // ==========================================================
         // DATABASE & CONSTANTS
         // ==========================================================
-        
+
         // This is a direct reference to the html2pdf library's main entry point, as requested
         const { html2pdf } = window;
         if (!html2pdf) {
@@ -1207,10 +1231,10 @@
             reportsPurityDistribution: null,
             reportsMonthlyRevenue: null,
         };
-        
+
         // Firebase instances
         let app, auth, db;
-        
+
         // Application State
         let state = {
             currentPage: 'dashboard',
@@ -1218,31 +1242,31 @@
             isAuthReady: false,
             userId: null,
             appId: typeof __app_id !== 'undefined' ? __app_id : 'default-app-id',
-            
+
             // Core Data
             vendors: [],
             meltingJobs: [],
             inventory: [], // NEW
             purchaseOrders: [], // NEW
             appUsers: [], // NEW (Simulated user list)
-            
+
             // Config & Settings
-            settings: { meltingChargePerKg: 15.00, lowStockThreshold: 10 }, 
-            
+            settings: { meltingChargePerKg: 15.00, lowStockThreshold: 10 },
+
             // Listeners
             unsubVendors: null,
             unsubJobs: null,
             unsubInventory: null, // NEW
             unsubPurchaseOrders: null, // NEW
             unsubAppUsers: null, // NEW
-            unsubSettings: null, 
+            unsubSettings: null,
         };
-        
+
         // ==========================================================
         // FIRESTORE API SERVICE
         // ==========================================================
         const ApiService = {
-            
+
             // --- Collection References ---
             _getVendorsColRef: () => {
                 if (!state.userId || !state.appId || !db) return null;
@@ -1280,7 +1304,7 @@
                 return { ...job, charge };
             },
             _getToday: () => new Date().toISOString().split('T')[0],
-            
+
             // --- Dashboard ---
             getDashboardStats: () => {
                 const jobs = state.meltingJobs.map(ApiService._getJobCalculations);
@@ -1293,7 +1317,7 @@
                 const totalNetOutput = jobs
                     .filter(j => j.status === 'Completed')
                     .reduce((sum, j) => sum + (j.outputWeight || 0), 0);
-                    
+
                 return { totalVendors, monthJobs, pendingJobs, unbilledJobs, totalNetOutput };
             },
             getDashboardChart: () => {
@@ -1307,7 +1331,7 @@
                     netData: last10Jobs.map(j => j.outputWeight || 0),
                 };
             },
-            
+
             // --- CSV Export Helper ---
             getExportData: (type) => {
                 let data = [];
@@ -1338,7 +1362,7 @@
                     default:
                         throw new Error("Invalid export type.");
                 }
-                
+
                 // Ensure data keys match header order
                 return {
                     headers,
@@ -1356,10 +1380,10 @@
                     }
                     return acc;
                 }, {});
-                
+
                 return [...state.vendors]
                     .map(v => ({ ...v, lastJobDate: jobsByVendor[v.id] || 'N/A' }))
-                    .filter(v => 
+                    .filter(v =>
                         v.name.toLowerCase().includes(lowerSearch) ||
                         v.mobile.toLowerCase().includes(lowerSearch)
                     )
@@ -1414,7 +1438,7 @@
                         return { ...jobWithCalcs, vendorName: vendor ? vendor.name : 'Unknown' };
                     })
                     .sort((a, b) => new Date(b.date) - new Date(a.date));
-                
+
                 if (purityFilter !== 'all') {
                     jobs = jobs.filter(j => {
                         if (purityFilter === 'high') return j.purity > 95;
@@ -1431,12 +1455,12 @@
                 showSpinner(true);
                 try {
                     const vendor = state.vendors.find(v => v.id === data.vendorId);
-                    const newJob = { 
-                        ...data, 
+                    const newJob = {
+                        ...data,
                         vendorName: vendor ? vendor.name : 'Unknown',
-                        outputWeight: null, 
-                        status: 'Pending', 
-                        billed: false 
+                        outputWeight: null,
+                        status: 'Pending',
+                        billed: false
                     };
                     const docRef = await addDoc(colRef, newJob);
                     showToast(`🔥 New Melting Job Added for ${vendor ? vendor.name : 'Unknown'}`, 'success'); // Real-time feedback
@@ -1479,7 +1503,7 @@
                     showSpinner(false);
                 }
             },
-            
+
             // --- Billing ---
             markJobsAsBilled: async (jobIds, vendorName) => {
                 if (!state.userId || !state.appId || !db) throw new Error("Database not ready.");
@@ -1496,7 +1520,7 @@
                     showSpinner(false);
                 }
             },
-            
+
             // --- Settings ---
             saveSettings: async (data) => {
                 const docRef = ApiService._getSettingsDocRef();
@@ -1509,12 +1533,12 @@
                     showSpinner(false);
                 }
             },
-            
+
             // --- NEW: Inventory ---
             getInventory: (searchTerm = '') => {
                 const lowerSearch = searchTerm.toLowerCase();
                 return [...state.inventory]
-                    .filter(i => 
+                    .filter(i =>
                         i.itemType.toLowerCase().includes(lowerSearch)
                     )
                     .sort((a, b) => a.itemType.localeCompare(b.itemType));
@@ -1558,7 +1582,7 @@
             getPurchaseOrders: (searchTerm = '') => {
                  const lowerSearch = searchTerm.toLowerCase();
                 return [...state.purchaseOrders]
-                    .filter(po => 
+                    .filter(po =>
                         po.supplierName.toLowerCase().includes(lowerSearch)
                     )
                     .sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -1597,7 +1621,7 @@
                     showSpinner(false);
                 }
             },
-            
+
             // --- NEW: User Management (Simulated) ---
             getUserManagementData: () => {
                 return [...state.appUsers].sort((a, b) => a.name.localeCompare(b.name));
@@ -1618,7 +1642,7 @@
                  if (!state.userId || !state.appId || !db) return;
                  const userDocRef = doc(db, `artifacts/${state.appId}/users/${state.userId}/appUsers`, user.uid);
                  const docSnap = await getDoc(userDocRef);
-                 
+
                  if (!docSnap.exists()) {
                      await setDoc(userDocRef, {
                          name: user.displayName || "Admin User",
@@ -1640,7 +1664,7 @@
         const globalSpinner = $('#global-spinner');
         const loginScreen = $('#login-screen');
         const authLoader = $('#auth-loader');
-        
+
         // Auth Forms
         const loginForm = $('#login-form');
         const loginError = $('#login-error');
@@ -1653,7 +1677,7 @@
         const forgotSuccess = $('#forgot-success');
         const showForgotPasswordButton = $('#show-forgot-password');
         const showLoginFromForgotButton = $('#show-login-from-forgot');
-        const loginLogo = $('#login-logo'); 
+        const loginLogo = $('#login-logo');
 
         const mainApp = $('#main-app');
         const sidebar = $('#sidebar');
@@ -1689,7 +1713,7 @@
         const billModalCloseButton = $('#bill-modal-close-button');
         const billPdfButton = $('#bill-pdf-button');
         const billPrintBrowserButton = $('#bill-print-browser-button'); // NEW
-        
+
         // Page Inputs/Elements
         const vendorSearch = $('#vendor-search');
         const purityFilter = $('#purity-filter');
@@ -1716,14 +1740,14 @@
             // Force light mode
             document.documentElement.classList.remove('dark');
             localStorage.setItem('theme', 'light');
-            updateChartTheme(); 
+            updateChartTheme();
         }
-        
+
         function initTheme() {
             // Always initialize to light theme
             applyTheme('light');
         }
-        
+
         function getChartColors() {
             // Updated colors to soft, professional, vibrant palette
             return {
@@ -1740,11 +1764,11 @@
 
         function updateChartTheme() {
             const colors = getChartColors();
-            
+
             // Set Chart.js defaults for visibility on white card backgrounds
             Chart.defaults.color = colors.chartTextColor;
             Chart.defaults.borderColor = colors.chartGridColor;
-            
+
             const chartsToUpdate = Object.values(CHARTS).filter(chart => chart);
 
             chartsToUpdate.forEach(chart => {
@@ -1754,7 +1778,7 @@
                 if (options.plugins && options.plugins.legend && options.plugins.legend.labels) {
                     options.plugins.legend.labels.color = colors.chartTextColor;
                 }
-                
+
                 // Update scale colors for legibility on white background
                 Object.keys(options.scales || {}).forEach(scaleId => {
                     const scale = options.scales[scaleId];
@@ -1762,7 +1786,7 @@
                     if (scale.grid) scale.grid.color = colors.chartGridColor;
                     if (scale.title) scale.title.color = colors.chartTextColor;
                 });
-                
+
                 // Don't destroy/recreate unless necessary (handled in render functions)
                 chart.update();
             });
@@ -1772,7 +1796,7 @@
         // ==========================================================
         // NAVIGATION & UI
         // ==========================================================
-        
+
         const navLinks = [
             { page: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard', group: 'Core' },
             { page: 'vendors', label: 'Vendor Management', icon: 'users', group: 'Core' },
@@ -1780,20 +1804,20 @@
             { page: 'inventory', label: 'Inventory Tracking', icon: 'package-open', group: 'Core' },
             { page: 'purchase-orders', label: 'Purchase Orders', icon: 'shopping-cart', group: 'Core' },
             { page: 'billing', label: 'Billing System', icon: 'receipt', group: 'Core' },
-            
+
             { page: 'reports', label: 'Reports & Analytics', icon: 'bar-chart-3', group: 'Reporting' },
-            
+
             { page: 'user-mgmt', label: 'User Management', icon: 'shield-check', group: 'Admin' },
             { page: 'notifications', label: 'Notifications', icon: 'bell', group: 'Admin' },
-            
-            { page: 'profile', label: 'My Profile', icon: 'user', group: 'Config' }, 
+
+            { page: 'profile', label: 'My Profile', icon: 'user', group: 'Config' },
             { page: 'settings', label: 'Settings', icon: 'settings', group: 'Config' }
         ];
 
         function buildSidebar() {
             const navContainer = $('nav');
             navContainer.innerHTML = '';
-            
+
             const groups = navLinks.reduce((acc, link) => {
                 if (!acc[link.group]) acc[link.group] = [];
                 acc[link.group].push(link);
@@ -1806,7 +1830,7 @@
                 if (group !== 'Core') {
                      html += `<p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-4 mb-1 px-4 font-inter">${group}</p>`;
                 }
-                
+
                 groups[group].forEach(link => {
                     html += `
                         <a href="#" class="sidebar-link ${link.page === 'dashboard' ? 'active' : ''} text-gray-600 hover:bg-gray-100 hover:text-gray-900 group flex items-center px-4 py-3 text-base font-medium rounded-2xl transition-colors duration-150" data-page="${link.page}">
@@ -1817,7 +1841,7 @@
                 });
             }
             navContainer.innerHTML = html;
-            
+
             $$('.sidebar-link').forEach(link => {
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
@@ -1826,13 +1850,13 @@
                     if (window.innerWidth < 768) toggleSidebar(false); // Changed breakpoint to md
                 });
             });
-            
+
             lucide.createIcons();
         }
-        
+
         function toggleSidebar(expand) {
              const isExpanded = expand === undefined ? sidebar.classList.contains('sidebar-expanded') : expand;
-             
+
              if (window.innerWidth < 768) { // Changed breakpoint to md
                  // Mobile view always keeps the sidebar expanded when open
                  if (expand === false) {
@@ -1858,43 +1882,43 @@
                  $$('nav span').forEach(span => span.classList.remove('hidden'));
              }
         }
-        
+
         function showPage(pageId) {
-            if (!state.isAuthReady) return; 
+            if (!state.isAuthReady) return;
 
             state.currentPage = pageId;
             pageContents.forEach(page => page.classList.add('hidden'));
-            
+
             const newPage = $(`#page-${pageId}`);
             if (newPage) {
                 newPage.classList.remove('hidden');
             }
-            
+
             $$('.sidebar-link').forEach(link => {
                 link.classList.toggle('active', link.dataset.page === pageId);
             });
-            
+
             pageTitle.textContent = navLinks.find(l => l.page === pageId)?.label || 'Dashboard';
             updateMainButton(pageId);
-            
+
             const renderFunctionName = `render${pageId.charAt(0).toUpperCase() + pageId.slice(1).replace(/-/g, '')}`;
-            
+
             if (pageId !== 'profile' && passwordResetSuccess) {
                 passwordResetSuccess.classList.add('hidden');
                 passwordResetSuccess.textContent = '';
             }
 
-            // Centralized render call - NOTE: This only calls the render function if navigated to the page. 
+            // Centralized render call - NOTE: This only calls the render function if navigated to the page.
             // The real-time updates are handled by the listeners regardless of the current page.
             if (window[renderFunctionName]) {
                 window[renderFunctionName]();
             }
-            
+
             lucide.createIcons({
                  elements: [newPage, ...newPage.querySelectorAll('[data-lucide]')]
             });
         }
-        
+
         function updateMainButton(pageId) {
             const config = {
                 'vendors': { text: 'Add Vendor', action: () => openModal('vendor') },
@@ -1902,7 +1926,7 @@
                 'inventory': { text: 'Add Item', action: () => openModal('inventoryItem') }, // NEW
                 'purchase-orders': { text: 'Add Order', action: () => openModal('purchaseOrder') }, // NEW
             };
-            
+
             const buttonConfig = config[pageId];
 
             if (buttonConfig) {
@@ -1913,11 +1937,11 @@
                 `;
                 mainAddButton.onclick = buttonConfig.action;
                 mainAddButton.classList.remove('hidden');
-                
+
                 // Mobile Floating Button
                 mobileFloatAddButton.onclick = buttonConfig.action;
                 mobileFloatAddButton.classList.remove('hidden');
-                
+
                 lucide.createIcons({
                     elements: [mainAddButton.querySelector('i'), mobileFloatAddButton.querySelector('i')]
                 });
@@ -1926,7 +1950,7 @@
                 mobileFloatAddButton.classList.add('hidden');
             }
         }
-        
+
         // ==========================================================
         // TOAST & SPINNER
         // ==========================================================
@@ -1940,7 +1964,7 @@
             toast.classList.remove('translate-x-[120%]');
             setTimeout(() => toast.classList.add('translate-x-[120%]'), 3000);
         }
-        
+
         function showSpinner(show) {
             if (show) {
                 globalSpinner.classList.add('open');
@@ -1950,20 +1974,20 @@
                 globalSpinner.classList.add('opacity-0', 'pointer-events-none');
             }
         }
-        
+
         // Animated Counter
         function animateCounter(el, to, duration = 1000, isWeight = false) {
             if (!el) return;
             const fixed = isWeight ? 2 : 0;
             const from = parseFloat(el.innerText.replace(/,/g, '').replace(' g', '')) || 0;
-            
+
             if (from === to) {
                  el.innerText = to.toLocaleString(undefined, {minimumFractionDigits: fixed, maximumFractionDigits: fixed}) + (isWeight ? ' g' : '');
                  return;
             }
-            
+
             let startTime = null;
-            
+
             const step = (timestamp) => {
                 if (!startTime) startTime = timestamp;
                 const progress = Math.min((timestamp - startTime) / duration, 1);
@@ -1988,7 +2012,7 @@
             let title = '';
             let formHtml = '';
             let data = {};
-            
+
             // All inputs use light theme classes
             const inputClass = "mt-1 block w-full rounded-2xl border-gray-300 bg-gray-50 text-gray-900 shadow-sm sm:text-base px-4 py-3 focus:border-blue-600 focus:ring-blue-600 font-inter";
             const labelClass = "block text-sm font-medium text-gray-700";
@@ -2003,7 +2027,7 @@
                 }
                 if (!data) { showToast('Error: Could not find record to edit.', 'error'); return; }
             }
-            
+
             switch (type) {
                 case 'vendor':
                     title = id ? 'Edit Vendor' : 'Add Vendor';
@@ -2075,7 +2099,7 @@
                     break;
                 case 'purchaseOrder': // NEW
                     title = id ? 'Edit Purchase Order' : 'Add New Purchase Order';
-                    const poStatusOptions = ['Pending', 'Paid'].map(status => 
+                    const poStatusOptions = ['Pending', 'Paid'].map(status =>
                         `<option value="${status}" ${data.paymentStatus === status ? 'selected' : ''}>${status}</option>`
                     ).join('');
                     formHtml = `
@@ -2096,13 +2120,13 @@
                     `;
                     break;
             }
-            
+
             modalTitle.textContent = title;
             modalForm.innerHTML = formHtml;
             formModal.classList.add('open');
             formModal.classList.remove('opacity-0', 'pointer-events-none');
         }
-        
+
         function closeModal() {
             formModal.classList.remove('open');
             formModal.classList.add('opacity-0', 'pointer-events-none');
@@ -2114,7 +2138,7 @@
             deleteModal.classList.add('open');
             deleteModal.classList.remove('opacity-0', 'pointer-events-none');
         }
-        
+
         function closeDeleteModal() {
             state.deleteHandler = null;
             deleteModal.classList.remove('open');
@@ -2127,7 +2151,7 @@
             const type = e.target.dataset.type;
             const formData = new FormData(e.target);
             const data = {};
-            
+
             for (let [key, value] of formData.entries()) {
                 const numFields = ['grossWeight', 'purity', 'outputWeight', 'weight', 'quantity', 'totalWeight', 'totalAmount'];
                 data[key] = numFields.includes(key) ? parseFloat(value) : value;
@@ -2157,7 +2181,7 @@
                 showToast(error.message, 'error');
             }
         }
-        
+
         async function handleDeleteConfirm() {
             if (state.deleteHandler) {
                 try {
@@ -2208,8 +2232,8 @@
                             }
                         ]
                     },
-                    options: { 
-                        responsive: true, 
+                    options: {
+                        responsive: true,
                         maintainAspectRatio: false,
                         plugins: { legend: { position: 'top', labels: { color: colors.chartTextColor } } },
                         scales: {
@@ -2220,12 +2244,12 @@
                 });
             }
         }
-        
+
         window.renderDashboard = () => {
             if (state.currentPage !== 'dashboard') return;
-            
+
             const stats = ApiService.getDashboardStats();
-            
+
             animateCounter($('#stat-total-vendors'), stats.totalVendors);
             animateCounter($('#stat-month-jobs'), stats.monthJobs);
             animateCounter($('#stat-pending-jobs'), stats.pendingJobs);
@@ -2234,7 +2258,7 @@
 
             updateDashboardCharts();
         }
-        
+
         window.renderVendors = () => {
             if (state.currentPage !== 'vendors') return;
 
@@ -2242,13 +2266,13 @@
             const vendors = ApiService.getVendors(searchTerm);
             const tableBody = $('#vendors-table-body');
             const emptyState = $('#vendors-empty-state');
-            
+
             if (vendors.length === 0) {
                 tableBody.innerHTML = '';
                 emptyState.classList.remove('hidden');
                 return;
             }
-            
+
             emptyState.classList.add('hidden');
             tableBody.innerHTML = vendors.map((v, index) => `
                 <tr id="row-${v.id}" class="${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-gray-100 transition-colors duration-150">
@@ -2272,17 +2296,17 @@
             const jobs = ApiService.getMeltingJobs(purityFilter.value);
             const tableBody = $('#melting-jobs-table-body');
             const emptyState = $('#melting-jobs-empty-state');
-            
+
             if (jobs.length === 0) {
                 tableBody.innerHTML = '';
                 emptyState.classList.remove('hidden');
                 return;
             }
-            
+
             emptyState.classList.add('hidden');
             tableBody.innerHTML = jobs.map((j, index) => {
                 const statusColor = j.status === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
-                
+
                 let actionButton, deleteButton;
                 if (j.status === 'Pending') {
                     actionButton = `<button class="action-complete text-blue-600 hover:text-blue-700 p-1 rounded-2xl transition-colors" data-id="${j.id}" data-type="completeJob" title="Mark Complete"><i data-lucide="check-circle" class="w-4 h-4"></i></button>`;
@@ -2294,7 +2318,7 @@
                     actionButton = `<span class="text-green-600 flex items-center p-1" title="Billed"><i data-lucide="receipt-text" class="w-4 h-4 mr-1"></i> Billed</span>`;
                     deleteButton = `<button disabled class="text-gray-300 p-1" title="Billed jobs cannot be deleted"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
                 }
-                
+
                 return `
                     <tr id="row-${j.id}" class="${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-gray-100 transition-colors duration-150">
                         <td class="px-6 py-4 whitespace-nowrap text-base font-medium text-gray-900">${j.vendorName}</td>
@@ -2327,17 +2351,17 @@
 
             const totalWeight = inventory.reduce((sum, item) => sum + (item.weight * item.quantity), 0);
             const lowStockCount = inventory.filter(item => item.quantity <= threshold).length;
-            
+
             animateCounter($('#inv-stat-total-weight'), totalWeight, 1000, true);
             animateCounter($('#inv-stat-total-items'), inventory.length);
             animateCounter($('#inv-stat-low-stock'), lowStockCount);
-            
+
             if (inventory.length === 0) {
                 tableBody.innerHTML = '';
                 emptyState.classList.remove('hidden');
                 return;
             }
-            
+
             emptyState.classList.add('hidden');
             tableBody.innerHTML = inventory.map((i, index) => {
                 const stockColor = i.quantity <= threshold ? 'text-red-600 font-bold' : 'text-gray-900 font-medium';
@@ -2364,7 +2388,7 @@
             const orders = ApiService.getPurchaseOrders(searchTerm);
             const tableBody = $('#purchase-orders-table-body');
             const emptyState = $('#purchase-orders-empty-state');
-            
+
             const totalOrders = orders.length;
             const pendingOrders = orders.filter(po => po.paymentStatus === 'Pending').length;
             const totalWeight = orders.reduce((sum, po) => sum + po.totalWeight, 0);
@@ -2372,13 +2396,13 @@
             animateCounter($('#po-stat-total-orders'), totalOrders);
             animateCounter($('#po-stat-pending-orders'), pendingOrders);
             animateCounter($('#po-stat-total-weight'), totalWeight, 1000, true);
-            
+
             if (orders.length === 0) {
                 tableBody.innerHTML = '';
                 emptyState.classList.remove('hidden');
                 return;
             }
-            
+
             emptyState.classList.add('hidden');
             tableBody.innerHTML = orders.map((po, index) => {
                 const statusColor = po.paymentStatus === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
@@ -2405,9 +2429,9 @@
             if (state.currentPage !== 'billing') return;
 
             const vendors = state.vendors;
-            billingVendorSelect.innerHTML = '<option value="">Select a vendor...</option>' + 
+            billingVendorSelect.innerHTML = '<option value="">Select a vendor...</option>' +
                 vendors.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
-            
+
             // Re-render table based on current selection
             renderBillingTable(billingVendorSelect.value);
         }
@@ -2417,16 +2441,16 @@
                 billingJobsSection.classList.add('hidden');
                 return;
             }
-            
+
             const vendor = state.vendors.find(v => v.id === vendorId);
             if (!vendor) {
                  billingJobsSection.classList.add('hidden');
                  return;
             }
-            
+
             const allJobs = ApiService.getMeltingJobs();
             const jobs = allJobs.filter(j => j.vendorId === vendorId && j.status === 'Completed' && !j.billed);
-            
+
             billingVendorName.textContent = `Unbilled Jobs for: ${vendor.name}`;
             billingJobsSection.classList.remove('hidden');
 
@@ -2436,7 +2460,7 @@
                 updateBillingTotal();
                 return;
             }
-            
+
             billingEmptyState.classList.add('hidden');
             billingTableBody.innerHTML = jobs.map((j, index) => `
                 <tr id="bill-row-${j.id}" class="${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-gray-100 transition-colors duration-150">
@@ -2453,19 +2477,19 @@
             updateBillingTotal();
             lucide.createIcons();
         }
-        
+
         function updateBillingTotal() {
             const checkedBoxes = $$('.bill-job-checkbox:checked');
             let totalCharge = 0;
             let totalGross = 0;
             let totalNet = 0;
-            
+
             checkedBoxes.forEach(box => {
                 totalCharge += parseFloat(box.dataset.charge);
                 totalGross += parseFloat(box.dataset.gross);
                 totalNet += parseFloat(box.dataset.net);
             });
-            
+
             billingTotalCharge.textContent = ApiService._formatCurrency(totalCharge);
             $('#bill-summary-gross').textContent = ApiService._formatGrams(totalGross);
             $('#bill-summary-net').textContent = ApiService._formatGrams(totalNet);
@@ -2475,16 +2499,16 @@
         function updateReportCharts() {
             const jobs = state.meltingJobs.map(ApiService._getJobCalculations).filter(j => j.status === 'Completed');
             const colors = getChartColors();
-            
+
             // --- 1. Monthly Melting Trend Data ---
             const monthlyData = jobs.reduce((acc, job) => {
-                const monthYear = job.date.substring(0, 7); 
+                const monthYear = job.date.substring(0, 7);
                 const netWeight = job.outputWeight || 0;
                 acc[monthYear] = (acc[monthYear] || 0) + netWeight;
                 return acc;
             }, {});
             const sortedMonths = Object.keys(monthlyData).sort();
-            
+
             // Update Chart 1
             if (CHARTS.reportsMonthlyMelting) {
                 CHARTS.reportsMonthlyMelting.data.labels = sortedMonths;
@@ -2499,7 +2523,7 @@
                 else if (job.purity >= 90) purityBins.medium++;
                 else purityBins.low++;
             });
-            
+
             // Update Chart 2
             if (CHARTS.reportsPurityDistribution) {
                 CHARTS.reportsPurityDistribution.data.datasets[0].data = [purityBins.low, purityBins.medium, purityBins.high];
@@ -2513,7 +2537,7 @@
                 return acc;
             }, {});
             const sortedRevenueMonths = Object.keys(revenueData).sort();
-            
+
             // Update Chart 3
             if (CHARTS.reportsMonthlyRevenue) {
                 CHARTS.reportsMonthlyRevenue.data.labels = sortedRevenueMonths;
@@ -2527,7 +2551,7 @@
 
             const jobs = state.meltingJobs.map(ApiService._getJobCalculations).filter(j => j.status === 'Completed');
             const colors = getChartColors();
-            
+
             // --- Chart 1: Monthly Melting Trend ---
             const monthlyData = jobs.reduce((acc, job) => {
                 const monthYear = job.date.substring(0, 7); // YYYY-MM
@@ -2536,7 +2560,7 @@
                 return acc;
             }, {});
             const sortedMonths = Object.keys(monthlyData).sort();
-            
+
             const ctx1 = $('#reports-monthly-melting').getContext('2d');
             if (CHARTS.reportsMonthlyMelting) CHARTS.reportsMonthlyMelting.destroy();
             CHARTS.reportsMonthlyMelting = new Chart(ctx1, {
@@ -2548,19 +2572,19 @@
                         data: sortedMonths.map(m => monthlyData[m]),
                         backgroundColor: colors.primary.replace('0.9', '0.2'),
                         borderColor: colors.primary.replace('0.9', '1'),
-                        borderWidth: 3, 
-                        tension: 0.3, 
+                        borderWidth: 3,
+                        tension: 0.3,
                         pointRadius: 5,
                         fill: true,
                     }]
                 },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false, 
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
                     plugins: { legend: { labels: { color: colors.chartTextColor } } },
-                    scales: { 
-                        y: { 
-                            beginAtZero: true, 
+                    scales: {
+                        y: {
+                            beginAtZero: true,
                             title: { display: true, text: 'Net Weight (g)', font: { family: 'Inter', size: 14 } },
                             ticks: { color: colors.chartTextColor, font: { family: 'Inter' } },
                             grid: { color: colors.chartGridColor }
@@ -2569,10 +2593,10 @@
                             ticks: { color: colors.chartTextColor, font: { family: 'Inter' } },
                             grid: { color: colors.chartGridColor }
                         }
-                    } 
+                    }
                 }
             });
-            
+
             // --- Chart 2: Purity Distribution ---
             const purityBins = { low: 0, medium: 0, high: 0 };
             jobs.forEach(job => {
@@ -2580,7 +2604,7 @@
                 else if (job.purity >= 90) purityBins.medium++;
                 else purityBins.low++;
             });
-            
+
             const ctx2 = $('#reports-purity-distribution').getContext('2d');
             if (CHARTS.reportsPurityDistribution) CHARTS.reportsPurityDistribution.destroy();
             CHARTS.reportsPurityDistribution = new Chart(ctx2, {
@@ -2593,18 +2617,18 @@
                             colors.orange, // Orange
                             colors.purple, // Purple
                             colors.secondary // Teal
-                        ], 
+                        ],
                         hoverOffset: 8,
                         borderColor: 'white',
                     }]
                 },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false, 
-                    plugins: { 
-                        legend: { 
-                            position: 'right', 
-                            labels: { color: colors.chartTextColor, padding: 20, font: { family: 'Inter' } } 
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: { color: colors.chartTextColor, padding: 20, font: { family: 'Inter' } }
                         },
                         tooltip: {
                             callbacks: {
@@ -2634,7 +2658,7 @@
                 return acc;
             }, {});
             const sortedRevenueMonths = Object.keys(revenueData).sort();
-            
+
             const ctx3 = $('#reports-monthly-revenue').getContext('2d');
             if (CHARTS.reportsMonthlyRevenue) CHARTS.reportsMonthlyRevenue.destroy();
             CHARTS.reportsMonthlyRevenue = new Chart(ctx3, {
@@ -2649,13 +2673,13 @@
                         borderWidth: 1
                     }]
                 },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false, 
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
                     plugins: { legend: { labels: { color: colors.chartTextColor } } },
-                    scales: { 
-                        y: { 
-                            beginAtZero: true, 
+                    scales: {
+                        y: {
+                            beginAtZero: true,
                             title: { display: true, text: 'Revenue (₹)', font: { family: 'Inter', size: 14 } },
                             ticks: { color: colors.chartTextColor, font: { family: 'Inter' } },
                             grid: { color: colors.chartGridColor }
@@ -2664,36 +2688,36 @@
                             ticks: { color: colors.chartTextColor, font: { family: 'Inter' } },
                             grid: { color: colors.chartGridColor }
                         }
-                    } 
+                    }
                 }
             });
-            
+
             updateChartTheme();
         }
-        
+
         window.renderNotifications = () => {
             if (state.currentPage !== 'notifications' && state.currentPage !== 'dashboard') return;
-            
+
             const notifications = getRealTimeNotifications();
             const listContainer = $('#notifications-list');
             const emptyState = $('#notifications-empty-state');
             const badge = $('#notification-badge');
-            
+
             // Update badge regardless of page
             if (notifications.length > 0) {
                 badge.classList.remove('hidden');
             } else {
                 badge.classList.add('hidden');
             }
-            
+
             // Only render list if on the Notifications page
             if (state.currentPage !== 'notifications') return;
-            
+
             // FIX: Added null check for listContainer and emptyState
             if (!listContainer || !emptyState) return;
 
             listContainer.innerHTML = ''; // Clear previous content
-            
+
             if (notifications.length === 0) {
                 emptyState.classList.remove('hidden');
                 // Re-inject empty state HTML if it was cleared
@@ -2709,7 +2733,7 @@
             } else {
                  emptyState.classList.add('hidden');
             }
-            
+
             const notificationHtml = notifications.map(n => `
                 <div class="flex items-start p-4 hover:bg-gray-50 transition-colors">
                     <i data-lucide="${n.icon}" class="h-6 w-6 ${n.color} flex-shrink-0 mt-1"></i>
@@ -2722,15 +2746,15 @@
                     </div>
                 </div>
             `).join('');
-            
+
             listContainer.innerHTML = notificationHtml;
             lucide.createIcons();
         }
-        
+
         function getRealTimeNotifications() {
             const alerts = [];
             const threshold = state.settings.lowStockThreshold;
-            
+
             // 1. Pending Jobs
             const pendingJobs = state.meltingJobs.filter(j => j.status === 'Pending').length;
             if (pendingJobs > 0) {
@@ -2742,7 +2766,7 @@
                     link: 'melting-records'
                 });
             }
-            
+
             // 2. Unpaid Bills
             const unbilledJobs = state.meltingJobs.filter(j => j.status === 'Completed' && !j.billed).length;
             if (unbilledJobs > 0) {
@@ -2754,7 +2778,7 @@
                     link: 'billing'
                 });
             }
-            
+
             // 3. Low Inventory
             const lowStockItems = state.inventory.filter(i => i.quantity <= threshold);
             if (lowStockItems.length > 0) {
@@ -2766,24 +2790,24 @@
                     link: 'inventory'
                 });
             }
-            
+
             return alerts;
         }
 
         window.renderUserMgmt = () => {
              if (state.currentPage !== 'user-mgmt') return;
-             
+
              const users = ApiService.getUserManagementData();
              const tableBody = $('#user-mgmt-table-body');
              const emptyState = $('#user-mgmt-empty-state');
              const currentUserId = auth.currentUser.uid;
-             
+
              if (users.length === 0) {
                 tableBody.innerHTML = '';
                 emptyState.classList.remove('hidden');
                 return;
             }
-            
+
             emptyState.classList.add('hidden');
             tableBody.innerHTML = users.map((u, index) => {
                 const isActive = u.isActive || false;
@@ -2801,8 +2825,8 @@
                         </td>
                          <td class="px-6 py-4 whitespace-nowrap text-base text-gray-600 font-inter">${u.role}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <button class="action-toggle-status text-yellow-600 hover:text-yellow-700 p-1 rounded-2xl transition-colors ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}" 
-                                data-id="${u.id}" data-status="${isActive}" 
+                            <button class="action-toggle-status text-yellow-600 hover:text-yellow-700 p-1 rounded-2xl transition-colors ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}"
+                                data-id="${u.id}" data-status="${isActive}"
                                 title="${isActive ? 'Deactivate User' : 'Activate User'}" ${isDisabled ? 'disabled' : ''}>
                                 <i data-lucide="${actionIcon}" class="w-4 h-4"></i>
                             </button>
@@ -2822,10 +2846,10 @@
             e.preventDefault();
             loginError.textContent = '';
             showSpinner(true);
-            
+
             const email = $('#login-email').value;
             const password = $('#login-password').value;
-            
+
             try {
                 await signInWithEmailAndPassword(auth, email, password);
             } catch (error) {
@@ -2844,11 +2868,11 @@
             e.preventDefault();
             signupError.textContent = '';
             showSpinner(true);
-            
+
             const name = $('#signup-name').value;
             const email = $('#signup-email').value;
             const password = $('#signup-password').value;
-            
+
             if (password.length < 6) {
                 signupError.textContent = "Password must be at least 6 characters long.";
                 showSpinner(false);
@@ -2876,15 +2900,15 @@
                 showSpinner(false);
             }
         }
-        
+
         async function handleForgotPassword(e) {
             e.preventDefault();
             forgotError.textContent = '';
             forgotSuccess.textContent = '';
             showSpinner(true);
-            
+
             const email = $('#forgot-email').value;
-            
+
             try {
                 await sendPasswordResetEmail(auth, email);
                 forgotSuccess.textContent = "Password reset link sent! Check your email.";
@@ -2895,7 +2919,7 @@
                 showSpinner(false);
             }
         }
-        
+
         async function handleSettingsSave(e) {
             e.preventDefault();
             const formData = new FormData(e.target);
@@ -2903,7 +2927,7 @@
                 meltingChargePerKg: parseFloat(formData.get('meltingChargePerKg')),
                 lowStockThreshold: parseInt(formData.get('lowStockThreshold'))
             };
-            
+
             if (isNaN(data.meltingChargePerKg) || data.meltingChargePerKg < 0) {
                 showToast("Please enter a valid, positive charge amount.", 'error');
                 return;
@@ -2920,12 +2944,12 @@
                 showToast(error.message, 'error');
             }
         }
-        
+
         async function handleProfileNameSave(e) {
             e.preventDefault();
             const formData = new FormData(e.target);
             const newName = formData.get('displayName');
-            
+
             if (!newName || newName.trim() === '') {
                 showToast("Name cannot be empty.", 'error');
                 return;
@@ -2936,7 +2960,7 @@
                 await updateProfile(auth.currentUser, {
                     displayName: newName
                 });
-                
+
                 // Manually update UI elements
                 userName.textContent = newName;
                 $('#profile-name-display').textContent = newName;
@@ -2951,7 +2975,7 @@
                 showSpinner(false);
             }
         }
-        
+
         async function handleChangePassword() {
             passwordResetSuccess.classList.add('hidden');
             showSpinner(true);
@@ -2987,19 +3011,19 @@
         // ==========================================================
         // EVENT LISTENERS
         // ==========================================================
-        
+
         loginForm.addEventListener('submit', handleLogin);
         signupForm.addEventListener('submit', handleSignUp);
         forgotPasswordForm.addEventListener('submit', handleForgotPassword);
         settingsForm.addEventListener('submit', handleSettingsSave);
         profileNameForm.addEventListener('submit', handleProfileNameSave);
         profileChangePasswordButton.addEventListener('click', handleChangePassword);
-        
+
         showSignupButton.addEventListener('click', (e) => { e.preventDefault(); showAuthForm('signup'); });
         showLoginButton.addEventListener('click', (e) => { e.preventDefault(); showAuthForm('login'); });
         showForgotPasswordButton.addEventListener('click', (e) => { e.preventDefault(); showAuthForm('forgot'); });
         showLoginFromForgotButton.addEventListener('click', (e) => { e.preventDefault(); showAuthForm('login'); });
-        
+
         logoutButton.addEventListener('click', () => {
             signOut(auth).catch(error => {
                 console.error("Error signing out: ", error);
@@ -3012,29 +3036,29 @@
         modalCancelButton.addEventListener('click', closeModal);
         deleteCancelButton.addEventListener('click', closeDeleteModal);
         deleteConfirmButton.addEventListener('click', handleDeleteConfirm);
-        
+
         billModalCloseButton.addEventListener('click', () => {
             billModal.classList.remove('open');
             billModal.classList.add('opacity-0', 'pointer-events-none');
             renderBillingTable(billingVendorSelect.value);
         });
-        
+
         billPdfButton.addEventListener('click', downloadBillAsPDF);
-        
+
         // NEW: Print Bill Button Listener
         billPrintBrowserButton.addEventListener('click', () => {
             // Open the bill modal content in a new window for printing
             const printContents = document.getElementById('bill-print-area').innerHTML;
             const originalContents = document.body.innerHTML;
-            
+
             // Temporarily replace body content to trigger print styles
             document.body.innerHTML = printContents;
             window.print();
-            
+
             // Restore original body content
             document.body.innerHTML = originalContents;
             // A reload is safer for restoring DOM and JS state, though intrusive
-            window.location.reload(); 
+            window.location.reload();
         });
 
         // CSV Export Listener
@@ -3059,7 +3083,7 @@
             const completeButton = e.target.closest('.action-complete');
             const deleteButton = e.target.closest('.action-delete');
             const toggleStatusButton = e.target.closest('.action-toggle-status');
-            
+
             if (editButton) {
                 openModal(editButton.dataset.type, editButton.dataset.id);
             }
@@ -3086,16 +3110,16 @@
                 }
             }
         });
-        
+
         vendorSearch.addEventListener('input', () => { renderVendors(); });
         inventorySearch.addEventListener('input', () => { renderInventory(); });
         poSearch.addEventListener('input', () => { renderPurchaseorders(); });
         purityFilter.addEventListener('change', () => { renderMeltingrecords(); });
-        
+
         billingVendorSelect.addEventListener('change', (e) => {
             renderBillingTable(e.target.value);
         });
-        
+
         billingJobsSection.addEventListener('change', (e) => {
             if (e.target.id === 'bill-select-all') {
                 $$('.bill-job-checkbox').forEach(box => {
@@ -3106,15 +3130,28 @@
         });
 
         generateBillButton.addEventListener('click', openBillModal);
-        
-        // Mobile Sidebar Toggle
-        sidebarToggleMobile.addEventListener('click', () => toggleSidebar(true));
+
+        // Mobile Sidebar Toggle (Step 3)
+        sidebarToggleMobile.addEventListener('click', () => {
+            document.getElementById('sidebar').classList.toggle('hidden');
+            document.getElementById('mobile-sidebar-overlay').classList.toggle('hidden');
+        });
         mobileSidebarOverlay.addEventListener('click', () => toggleSidebar(false));
+
+        // Chart.js Canvas Resize (Step 4)
+        window.addEventListener('resize', () => {
+            if (window.Chart && window.Chart.instances) {
+                window.Chart.helpers.each(window.Chart.instances, function(instance){
+                    instance.resize();
+                });
+            }
+        });
+
 
         // ==========================================================
         // EXPORT FUNCTIONS (CSV and PDF)
         // ==========================================================
-        
+
         function downloadCSVExport(type) {
             try {
                 const { headers, data } = ApiService.getExportData(type);
@@ -3122,7 +3159,7 @@
                     showToast("No data to export.", 'info');
                     return;
                 }
-                
+
                 const csvContent = [
                     headers.join(','),
                     ...data.map(row => row.map(field => JSON.stringify(field)).join(','))
@@ -3132,7 +3169,7 @@
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement("a");
                 const date = new Date().toISOString().split('T')[0];
-                
+
                 link.setAttribute("href", url);
                 link.setAttribute("download", `${type}_report_${date}.csv`);
                 link.style.visibility = 'hidden';
@@ -3153,16 +3190,16 @@
             const checkedBoxes = $$('.bill-job-checkbox:checked');
             const jobIds = Array.from(checkedBoxes).map(box => box.dataset.jobId);
             const allJobs = ApiService.getMeltingJobs();
-            
+
             const jobsToBill = allJobs.filter(j => jobIds.includes(j.id));
-            
+
             let totalNet = 0;
             let totalGross = 0;
             let totalCharge = 0;
-            
+
             $('#bill-items-table').innerHTML = jobsToBill.map(j => {
                 totalGross += j.grossWeight;
-                totalNet += (j.outputWeight || 0); 
+                totalNet += (j.outputWeight || 0);
                 totalCharge += j.charge;
                 return `
                     <tr class="text-black">
@@ -3174,18 +3211,18 @@
                     </tr>
                 `;
             }).join('');
-            
+
             $('#bill-id').textContent = `B-${Date.now().toString().slice(-6)}`;
             $('#bill-date').textContent = new Date().toLocaleDateString('en-IN');
             $('#bill-vendor-name-display').textContent = vendor.name;
             $('#bill-vendor-phone').textContent = vendor.mobile;
             $('#bill-vendor-address').textContent = vendor.address;
-            
+
             $('#bill-total-gross').textContent = ApiService._formatGrams(totalGross);
             $('#bill-total-net').textContent = ApiService._formatGrams(totalNet);
             $('#bill-melting-charge').textContent = `(Charge @ ₹${state.settings.meltingChargePerKg}/kg)`;
             $('#bill-total-charge-display').textContent = ApiService._formatCurrency(totalCharge);
-            
+
             try {
                 await ApiService.markJobsAsBilled(jobIds, vendor.name);
                 billModal.classList.add('open');
@@ -3201,7 +3238,7 @@
                 showToast("Error: PDF library (html2pdf.js) is not loaded.", 'error');
                 return;
             }
-            
+
             const element = document.getElementById('bill-print-area');
             const billId = $('#bill-id').textContent;
             const vendorName = $('#bill-vendor-name-display').textContent.replace(/ /g, '_');
@@ -3228,14 +3265,14 @@
                 },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
-            
+
             // Wait briefly to ensure DOM updates and styles are finalized
             await new Promise(resolve => setTimeout(resolve, 300));
-            
+
             try {
                 // Generate PDF
                 await html2pdf().set(opt).from(element).save();
-                
+
                 showToast("Bill downloaded as PDF successfully!", 'success');
 
             } catch (err) {
@@ -3248,7 +3285,7 @@
                 lucide.createIcons();
             }
         }
-        
+
 
         // ==========================================================
         // FIRESTORE REAL-TIME LISTENERS
@@ -3261,39 +3298,39 @@
             if (state.unsubInventory) state.unsubInventory(); // NEW
             if (state.unsubPurchaseOrders) state.unsubPurchaseOrders(); // NEW
             if (state.unsubAppUsers) state.unsubAppUsers(); // NEW
-            
+
             state.unsubVendors = null;
             state.unsubJobs = null;
             state.unsubSettings = null;
             state.unsubInventory = null;
             state.unsubPurchaseOrders = null;
             state.unsubAppUsers = null;
-            
+
             state.vendors = [];
             state.meltingJobs = [];
             state.inventory = [];
             state.purchaseOrders = [];
             state.appUsers = [];
-            state.settings = { meltingChargePerKg: 15.00, lowStockThreshold: 10 }; 
+            state.settings = { meltingChargePerKg: 15.00, lowStockThreshold: 10 };
         }
 
         function updateRender(pageId, dataArray, name) {
             const renderFn = `render${pageId.charAt(0).toUpperCase() + pageId.slice(1).replace(/-/g, '')}`;
-            
+
             // 1. Update lists if on the related page
             if (state.currentPage === pageId && window[renderFn]) {
                 window[renderFn]();
             }
-            
+
             // 2. Always update components relying on ALL data
             if (window.renderDashboard) window.renderDashboard();
             if (window.renderReports) {
                 // Update charts data and redraw without re-initializing the component
-                updateReportCharts(); 
+                updateReportCharts();
             }
             if (window.renderNotifications) window.renderNotifications();
             if (window.renderProfile) window.renderProfile();
-            
+
             // 3. Special case for billing, check if the selected vendor data changed
             if (state.currentPage === 'billing' && (name === 'vendors' || name === 'meltingJobs')) {
                  renderBillingTable(billingVendorSelect.value);
@@ -3302,7 +3339,7 @@
 
         function attachFirestoreListeners() {
             if (!state.userId) { console.error("Cannot attach listeners: User ID missing."); return; }
-            
+
             const listeners = [
                 { pageId: 'vendors', name: 'vendors', colRef: ApiService._getVendorsColRef(), stateKey: 'vendors', unsubKey: 'unsubVendors' },
                 { pageId: 'melting-records', name: 'meltingJobs', colRef: ApiService._getJobsColRef(), stateKey: 'meltingJobs', unsubKey: 'unsubJobs' },
@@ -3321,10 +3358,10 @@
                     });
                     state[config.stateKey] = data;
                     console.log(`Updated ${config.name} state:`, data.length);
-                    
+
                     // Call the unified update render function
                     updateRender(config.pageId, data, config.name);
-                    
+
                 }, (error) => {
                     console.error(`Error listening to ${config.name}:`, error.message);
                     if (error.code !== 'permission-denied') {
@@ -3360,18 +3397,18 @@
         function init3DBackground() {
             const canvas = document.getElementById('three-canvas');
             if (!canvas) return;
-            
+
             const scene = new THREE.Scene();
             const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-            
+
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setClearColor(0x000000, 0); // Transparent background
 
             // Lighting (Ambient light + focused blue/amber light for thematic glow)
             const ambientLight = new THREE.AmbientLight(0x404040, 5); // soft white light
             scene.add(ambientLight);
-            
+
             const pointLight = new THREE.PointLight(0x2563eb, 30); // Blue light
             pointLight.position.set(5, 5, 5);
             scene.add(pointLight);
@@ -3379,23 +3416,23 @@
             const pointLight2 = new THREE.PointLight(0xffa500, 15); // Amber/Gold light
             pointLight2.position.set(-5, -5, 5);
             scene.add(pointLight2);
-            
+
             // Silver/Metallic Geometry (Torus Knots for complex, industrial look)
             const geometry = new THREE.TorusKnotGeometry(2, 0.5, 150, 16);
-            const material = new THREE.MeshPhongMaterial({ 
+            const material = new THREE.MeshPhongMaterial({
                 color: 0xcccccc, // Silver color
                 specular: 0xffffff, // High reflectivity
-                shininess: 100, 
-                flatShading: true 
+                shininess: 100,
+                flatShading: true
             });
             const mesh = new THREE.Mesh(geometry, material);
             scene.add(mesh);
 
             camera.position.z = 8;
-            
+
             let mouseX = 0;
             let mouseY = 0;
-            
+
             document.addEventListener('mousemove', (event) => {
                 mouseX = (event.clientX / window.innerWidth) * 2 - 1;
                 mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -3407,7 +3444,7 @@
                     renderer.dispose();
                     return;
                 }
-                
+
                 requestAnimationFrame(animate);
 
                 // Auto-rotation
@@ -3417,7 +3454,7 @@
                 // Subtle parallax effect based on mouse movement
                 mesh.rotation.x += mouseY * 0.001;
                 mesh.rotation.y += mouseX * 0.001;
-                
+
                 // Animate lights to enhance metallic reflections
                 const time = Date.now() * 0.001;
                 pointLight.position.x = Math.sin(time * 0.7) * 9;
@@ -3428,7 +3465,7 @@
 
                 renderer.render(scene, camera);
             }
-            
+
             function onWindowResize() {
                 camera.aspect = window.innerWidth / window.innerHeight;
                 camera.updateProjectionMatrix();
@@ -3446,14 +3483,14 @@
         async function init() {
             // --- 1. Set up theme immediately ---
             initTheme();
-            
+
             // --- 2. Show login screen and loader ---
-            loginScreen.classList.remove('hidden'); 
-            showAuthForm('loader'); 
-            
+            loginScreen.classList.remove('hidden');
+            showAuthForm('loader');
+
             // --- 3. Render all Lucide icons on the page ---
             lucide.createIcons();
-            
+
             // --- 5. Firebase Init (Using user provided config) ---
             const USER_FIREBASE_CONFIG = {
                 apiKey: "AIzaSyCm_tAiQNKZTR_-g_mJFs4r-ykA7JAp2gs",
@@ -3487,7 +3524,7 @@
                 db = getFirestore(app);
                 auth = getAuth(app);
                 setLogLevel('debug');
-                
+
                 init3DBackground(); // Start 3D animation immediately
 
                 // --- 6. Auth State Change Listener ---
@@ -3499,12 +3536,12 @@
 
                         userName.textContent = user.displayName || "Administrator";
                         userAvatar.src = user.photoURL || `https://placehold.co/40x40/2563eb/ffffff?text=${(user.displayName || 'A').charAt(0).toUpperCase()}`;
-                        userIdDisplay.textContent = user.uid; 
+                        userIdDisplay.textContent = user.uid;
 
                         await ApiService.setupInitialUser(user);
 
                         attachFirestoreListeners();
-                        
+
                         loginScreen.classList.add('hidden');
                         mainApp.classList.remove('hidden');
                         mainApp.classList.add('h-full');
@@ -3515,13 +3552,13 @@
                         console.log("User is signed out.");
                         state.userId = null;
                         state.isAuthReady = false;
-                        
+
                         detachFirestoreListeners();
 
                         loginScreen.classList.remove('hidden');
                         mainApp.classList.add('hidden');
                         mainApp.classList.remove('h-full');
-                        
+
                         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                             try {
                                 await signInWithCustomToken(auth, __initial_auth_token);
