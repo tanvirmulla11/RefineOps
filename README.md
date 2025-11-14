@@ -1,6 +1,4 @@
-### *RefineOps – CI/CD Pipeline with Jenkins, Docker, Kubernetes (k3s), Prometheus & Grafana*
 
----
 
 # 🚀 RefineOps – Automated CI/CD Pipeline on AWS
 
